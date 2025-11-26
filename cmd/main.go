@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	const port = ":8080"
+	const port = "8080"
 
 	mux := http.NewServeMux()
 
@@ -15,19 +15,21 @@ func main() {
 	// 	if err != nil {
 	// 		log.Println("could not find file to serve")
 	// 	}
-
 	// 	w.Write(greetings)
 	// })
 
-	dir := http.Dir("./assets")
-	mux.Handle("/", http.FileServer(dir))
+	statDir := http.Dir("./static")
+	mux.Handle("/", http.FileServer(statDir))
+
+	assetsDir := http.Dir("./assets")
+	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(assetsDir)))
 
 	s := &http.Server{
-		Addr:    port,
+		Addr:    ":" + port,
 		Handler: mux,
 	}
 
-	log.Printf("Listening at port %s", port)
+	log.Printf("Serving files on port: %s\n", port)
 
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatalf("Failed to listen at port %s. Error: %v", port, err)
