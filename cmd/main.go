@@ -19,10 +19,18 @@ func main() {
 	// })
 
 	statDir := http.Dir("./static")
-	mux.Handle("/", http.FileServer(statDir))
+	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(statDir)))
 
 	assetsDir := http.Dir("./assets")
-	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(assetsDir)))
+	mux.Handle("/app/assets/", http.StripPrefix("/app/assets/", http.FileServer(assetsDir)))
+
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(200)
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte("OK , We are Chirping"))
+		}
+	})
 
 	s := &http.Server{
 		Addr:    ":" + port,
