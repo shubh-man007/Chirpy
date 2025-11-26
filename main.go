@@ -17,7 +17,6 @@ func handleRequest(req Request) {
 
 func handleRequests(reqs <-chan Request) {
 	for req := range reqs {
-		fmt.Printf(">> %s\n", req)
 		go handleRequest(req)
 	}
 }
@@ -25,7 +24,7 @@ func handleRequests(reqs <-chan Request) {
 func main() {
 	reqs := make(chan Request, 100)
 	go handleRequests(reqs)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 4; i++ {
 		reqs <- Request{Path: fmt.Sprintf("/path/%d", i)}
 		time.Sleep(500 * time.Millisecond)
 	}
