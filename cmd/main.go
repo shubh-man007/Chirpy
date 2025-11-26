@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 )
 
 func main() {
@@ -11,17 +10,17 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		greetings, err := os.ReadFile("assets/index.html")
-		if err != nil {
-			log.Println("could not find file to serve")
-		}
+	// mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	greetings, err := os.ReadFile("assets/index.html")
+	// 	if err != nil {
+	// 		log.Println("could not find file to serve")
+	// 	}
 
-		w.Write(greetings)
-	})
+	// 	w.Write(greetings)
+	// })
 
-	// dir := http.Dir("./assets")
-	// mux.Handle("/", http.FileServer(dir))
+	dir := http.Dir("./assets")
+	mux.Handle("/", http.FileServer(dir))
 
 	s := &http.Server{
 		Addr:    port,
