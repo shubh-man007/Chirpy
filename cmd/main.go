@@ -76,19 +76,53 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"github.com/shubh-man007/Chirpy/cmd/internal/middleware"
 )
+
+const readinessMessage = `
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<link rel="icon" href="./favicon.ico" type="image/x-icon">
+	<title>Chirpy</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+	<h3>OK</h3>
+</body>
+</html>
+`
 
 func main() {
 	const port = "8080"
 	mux := http.NewServeMux()
 
-	mux.Handle("/", http.FileServer(http.Dir("./static")))
-	// mux.Handle("/assets", http.FileServer(http.Dir("./assets")))
+	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir("./static"))))
+	mux.Handle("/app/assets/", http.StripPrefix("/app/assets/", http.FileServer(http.Dir("./assets"))))
+
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(200)
+			w.Header().Add("Content-Type", "text/plain")
+			w.Header().Add("Content-Type", "charset=utf-8")
+			_, err := w.Write([]byte(readinessMessage))
+			if err != nil {
+				log.Printf("could not write to readiness endpoint: %s", err.Error())
+			}
+		}
+
+	})
 
 	s := &http.Server{
 		Addr:    ":" + port,
-		Handler: mux,
+		Handler: middleware.LogMiddleware(mux),
 	}
+
+	log.Printf("Running server at port:%s", port)
 
 	err := s.ListenAndServe()
 	if err != nil {
