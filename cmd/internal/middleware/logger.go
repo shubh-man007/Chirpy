@@ -23,7 +23,6 @@ func LogMiddleware(next http.Handler) http.Handler {
 // 			ip     = r.RemoteAddr
 // 			method = r.Method
 // 			url    = r.URL.String()
-// 			proto  = r.Proto
 // 		)
 
 // 		userAttrs := slog.Group("user", "ip", ip)
