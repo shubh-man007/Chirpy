@@ -34,8 +34,8 @@ func main() {
 		}
 	})
 
-	mux.HandleFunc("GET /api/metrics", cfg.ServeHTTP)
-	mux.HandleFunc("POST /api/reset", cfg.ServeHTTP)
+	mux.HandleFunc("GET /admin/metrics", cfg.ServeHTTP)
+	mux.HandleFunc("POST /admin/reset", cfg.ServeHTTP)
 
 	s := &http.Server{
 		Addr:    ":" + port,
