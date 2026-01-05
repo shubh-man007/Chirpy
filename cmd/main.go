@@ -16,10 +16,13 @@ func main() {
 	cfg := middleware.NewApiCfg()
 	cfg.FileserverHits.Store(0)
 
-	mux.Handle("/app/", http.StripPrefix("/app/", cfg.HitCounterMiddleware(http.FileServer(http.Dir("./static")))))
-	mux.Handle("/app/assets/", http.StripPrefix("/app/assets/", http.FileServer(http.Dir("./assets"))))
+	fileserver := http.FileServer(http.Dir("./static"))
+	assetserver := http.FileServer(http.Dir("./assets"))
 
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/app/", http.StripPrefix("/app/", cfg.HitCounterMiddleware(fileserver)))
+	mux.Handle("/app/assets/", http.StripPrefix("/app/assets/", cfg.HitCounterMiddleware(assetserver)))
+
+	mux.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			w.WriteHeader(200)
 			w.Header().Add("Content-Type", "text/plain")
@@ -31,8 +34,8 @@ func main() {
 		}
 	})
 
-	mux.HandleFunc("GET /metrics", cfg.ServeHTTP)
-	mux.HandleFunc("POST /reset", cfg.ServeHTTP)
+	mux.HandleFunc("GET /api/metrics", cfg.ServeHTTP)
+	mux.HandleFunc("POST /api/reset", cfg.ServeHTTP)
 
 	s := &http.Server{
 		Addr:    ":" + port,

@@ -19,7 +19,7 @@ func (cfg *apiConfig) HitCounterMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			cfg.FileserverHits.Add(1)
-			log.Print("COUNT app requested")
+			log.Print("[COUNT] app requested")
 		}
 
 		next.ServeHTTP(w, r)
@@ -27,7 +27,7 @@ func (cfg *apiConfig) HitCounterMiddleware(next http.Handler) http.Handler {
 }
 
 func (cfg *apiConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet && r.URL.Path == "/metrics" {
+	if r.Method == http.MethodGet && r.URL.Path == "/api/metrics" {
 		x := cfg.FileserverHits.Load()
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
@@ -38,7 +38,7 @@ func (cfg *apiConfig) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == http.MethodPost && r.URL.Path == "/reset" {
+	if r.Method == http.MethodPost && r.URL.Path == "/api/reset" {
 		cfg.FileserverHits.Store(0)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
