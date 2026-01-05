@@ -27,11 +27,11 @@ func New(port string) *Server {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 
-	fileserver := http.FileServer(http.Dir("../static"))
-	assetserver := http.FileServer(http.Dir("../assets"))
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("../static"))))
+	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("../assets"))))
 
+	fileserver := http.FileServer(http.Dir("../static"))
 	mux.Handle("/app/", http.StripPrefix("/app/", s.apiCfg.HitCounterMiddleware(fileserver)))
-	mux.Handle("/app/assets/", http.StripPrefix("/app/assets/", s.apiCfg.HitCounterMiddleware(assetserver)))
 
 	mux.HandleFunc("GET /api/healthz", handler.Health)
 

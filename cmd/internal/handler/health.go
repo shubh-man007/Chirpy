@@ -11,12 +11,12 @@ const readinessMessage = `
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="/app/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
   <title>Health Check - Chirpy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app/styles.css" />
+  <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
   <div class="container compact">
