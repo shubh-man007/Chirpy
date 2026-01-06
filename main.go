@@ -103,6 +103,34 @@ import (
 	"time"
 )
 
+const eventsHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Events</title>
+</head>
+<body>
+    <h2>Model Response</h2>
+    <p id="resp"></p>
+
+    <script>
+        var sse = new EventSource('/events');
+        var resp = document.getElementById('resp')
+
+        sse.onmessage = function (event) {
+            resp.innerHTML += event.data + ' ';
+        };
+
+		sse.onerror = function (e) {
+            setTimeout(() => (resp.innerHTML = ''), 1000)
+        };
+    </script>
+</body>
+</html>
+`
+
 const message = `
 <html>
 <head>
@@ -139,7 +167,9 @@ func main() {
 	}
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "events.html")
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(200)
+		w.Write([]byte(eventsHTML))
 	})
 
 	mux.HandleFunc("/events", tk.streamResHandler)
