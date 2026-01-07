@@ -32,7 +32,7 @@ func errJSON(w http.ResponseWriter) {
 	w.Write(data)
 }
 
-func ValidateChirpLen(w http.ResponseWriter, r *http.Request) {
+func ValidateChirp(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	chirp := ChirpBody{}
 	err := decoder.Decode(&chirp)
