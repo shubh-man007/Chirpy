@@ -4,15 +4,20 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"unicode/utf8"
 )
+
+var profane = []string{"kerfuffle", "sharbert", "fornax"}
+var astrix = "****"
 
 type ChirpBody struct {
 	Body string `json:"body"`
 }
 
 type ChirpLenValid struct {
-	Message bool `json:"valid"`
+	Body    string `json:"cleaned_body"`
+	Message bool   `json:"valid"`
 }
 
 type ChirpLenErr struct {
@@ -39,9 +44,15 @@ func ValidateChirpLen(w http.ResponseWriter, r *http.Request) {
 
 	chirpData := chirp.Body
 
+	for _, prof := range profane {
+		if strings.Contains(chirpData, prof) {
+			chirpData = strings.ReplaceAll(chirpData, prof, astrix)
+		}
+	}
+
 	switch {
 	case utf8.RuneCountInString(chirpData) <= 140:
-		resBody := ChirpLenValid{Message: true}
+		resBody := ChirpLenValid{Body: chirpData, Message: true}
 
 		dat, err := json.Marshal(resBody)
 		if err != nil {
