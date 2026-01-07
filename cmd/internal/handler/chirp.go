@@ -19,17 +19,22 @@ type ChirpLenErr struct {
 	Message string `json:"error"`
 }
 
+func errJSON(w http.ResponseWriter) {
+	errMess := ChirpLenErr{Message: "Something went wrong"}
+	data, _ := json.Marshal(errMess)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	w.Write(data)
+}
+
 func ValidateChirpLen(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	chirp := ChirpBody{}
 	err := decoder.Decode(&chirp)
 	if err != nil {
 		log.Printf("Error decoding requested JSON: %s", err)
-		errMess := ChirpLenErr{Message: "Something went wrong"}
-		data, _ := json.Marshal(errMess)
-		w.WriteHeader(500)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(data)
+		errJSON(w)
+		return
 	}
 
 	chirpData := chirp.Body
@@ -41,11 +46,8 @@ func ValidateChirpLen(w http.ResponseWriter, r *http.Request) {
 		dat, err := json.Marshal(resBody)
 		if err != nil {
 			log.Printf("Error marshalling Valid JSON: %s", err)
-			errMess := ChirpLenErr{Message: "Something went wrong"}
-			data, _ := json.Marshal(errMess)
-			w.WriteHeader(500)
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(data)
+			errJSON(w)
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
@@ -57,11 +59,8 @@ func ValidateChirpLen(w http.ResponseWriter, r *http.Request) {
 		dat, err := json.Marshal(resBody)
 		if err != nil {
 			log.Printf("Error marshalling Err JSON: %s", err)
-			errMess := ChirpLenErr{Message: "Something went wrong"}
-			data, _ := json.Marshal(errMess)
-			w.WriteHeader(500)
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(data)
+			errJSON(w)
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(400)
