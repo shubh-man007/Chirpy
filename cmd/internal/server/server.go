@@ -34,6 +34,7 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("/app/", http.StripPrefix("/app/", s.apiCfg.HitCounterMiddleware(fileserver)))
 
 	mux.HandleFunc("GET /api/healthz", handler.Health)
+	mux.HandleFunc("POST /api/validate_chirp", handler.ValidateChirpLen)
 
 	adminHandler := handler.NewAdminHandler(s.apiCfg)
 	mux.HandleFunc("GET /admin/metrics", adminHandler.Metrics)
