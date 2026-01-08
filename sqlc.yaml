@@ -1,0 +1,9 @@
+version: "2"
+sql:
+  - schema: "cmd/internal/database/migrations"
+    queries: "cmd/internal/database/queries"
+    engine: "postgresql"
+    gen:
+      go:
+        out: "cmd/internal/database"
+        package: "database"
