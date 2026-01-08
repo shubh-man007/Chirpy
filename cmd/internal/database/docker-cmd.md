@@ -85,7 +85,7 @@ docker stop <container-name>
 docker rm <container-name>
 ```
 
-*(Use migrations to recreate tables after removal.)*
+*(Use up migrations to recreate tables after removal.)*
 
 ---
 
