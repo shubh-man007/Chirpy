@@ -2,10 +2,7 @@ package database
 
 import (
 	"database/sql"
-	"log"
-	"os"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -14,14 +11,7 @@ type DbPgx struct {
 	Queries *Queries
 }
 
-func NewDbPgx() (*DbPgx, error) {
-	err := godotenv.Load()
-	if err != nil {
-		log.Printf("could not load .env file: %s", err)
-		return nil, err
-	}
-
-	connStr := os.Getenv("DB_URL")
+func NewDbPgx(connStr string) (*DbPgx, error) {
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, err

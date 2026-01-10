@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/shubh-man007/Chirpy/cmd/internal/database"
 	"github.com/shubh-man007/Chirpy/cmd/internal/server"
 )
@@ -10,7 +12,14 @@ import (
 func main() {
 	const port = "8080"
 
-	pgx, err := database.NewDbPgx()
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("could not load .env file: %s", err)
+	}
+
+	connStr := os.Getenv("DB_URL")
+
+	pgx, err := database.NewDbPgx(connStr)
 	if err != nil {
 		log.Fatalf("failed connecting to DB: %v", err)
 	}
