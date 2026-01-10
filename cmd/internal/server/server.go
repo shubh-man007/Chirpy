@@ -4,18 +4,20 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/shubh-man007/Chirpy/cmd/internal/config"
+	"github.com/shubh-man007/Chirpy/cmd/internal/database"
 	"github.com/shubh-man007/Chirpy/cmd/internal/handler"
 	"github.com/shubh-man007/Chirpy/cmd/internal/middleware"
 )
 
 type Server struct {
 	Port       string
-	apiCfg     *middleware.ApiConfig
+	apiCfg     *config.ApiConfig
 	httpServer *http.Server
 }
 
-func New(port string) *Server {
-	cfg := middleware.NewApiCfg()
+func New(port string, db *database.Queries) *Server {
+	cfg := config.NewApiCfg(db)
 	cfg.FileserverHits.Store(0)
 
 	return &Server{
@@ -31,7 +33,7 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("../assets"))))
 
 	fileserver := http.FileServer(http.Dir("../static"))
-	mux.Handle("/app/", http.StripPrefix("/app/", s.apiCfg.HitCounterMiddleware(fileserver)))
+	mux.Handle("/app/", http.StripPrefix("/app/", middleware.HitCounterMiddleware(s.apiCfg, fileserver)))
 
 	mux.HandleFunc("GET /api/healthz", handler.Health)
 	mux.HandleFunc("POST /api/validate_chirp", handler.ValidateChirp)

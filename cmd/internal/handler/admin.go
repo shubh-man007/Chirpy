@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/shubh-man007/Chirpy/cmd/internal/middleware"
+	"github.com/shubh-man007/Chirpy/cmd/internal/config"
 )
 
 const metricBody = `
@@ -56,10 +56,10 @@ const resetBody = `
 `
 
 type AdminHandler struct {
-	apiCfg *middleware.ApiConfig
+	apiCfg *config.ApiConfig
 }
 
-func NewAdminHandler(cfg *middleware.ApiConfig) *AdminHandler {
+func NewAdminHandler(cfg *config.ApiConfig) *AdminHandler {
 	return &AdminHandler{apiCfg: cfg}
 }
 
