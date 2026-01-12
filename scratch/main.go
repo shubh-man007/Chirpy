@@ -116,11 +116,17 @@ func watch(ctx context.Context, name string) {
 	}
 }
 
+func valFunc(ctx context.Context) {
+	fmt.Printf("Name: %s\n", ctx.Value("name").(string))
+}
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
+	ctx1 := context.WithValue(context.Background(), "name", "Shubh")
 
 	go watch(ctx, "Go1")
 	go watch(ctx, "Go2")
+	go valFunc(ctx1)
 
 	time.Sleep(6 * time.Second)
 	fmt.Println("[CANCEL]")
