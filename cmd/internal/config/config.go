@@ -9,6 +9,7 @@ import (
 type ApiConfig struct {
 	FileserverHits atomic.Int32
 	DB             *database.Queries
+	Platform       string
 }
 
 func NewApiCfg(db *database.Queries) *ApiConfig {
@@ -16,4 +17,3 @@ func NewApiCfg(db *database.Queries) *ApiConfig {
 		DB: db,
 	}
 }
-

@@ -74,11 +74,27 @@ func (h *AdminHandler) Metrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) Reset(w http.ResponseWriter, r *http.Request) {
-	h.apiCfg.FileserverHits.Store(0)
+	if h.apiCfg.Platform == "dev" {
+		if err := h.apiCfg.DB.DeleteUser(r.Context()); err != nil {
+			http.Error(w, "failed to reset users", http.StatusInternalServerError)
+			return
+		}
+
+		h.apiCfg.FileserverHits.Store(0)
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(resetBody))
+		if err != nil {
+			log.Printf("[%s] Could not write to reset endpoint: %s", h.apiCfg.Platform, err)
+		}
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte(resetBody))
+	w.WriteHeader(http.StatusForbidden)
+	_, err := w.Write([]byte("Forbidden"))
 	if err != nil {
-		log.Printf("could not write to reset endpoint: %s", err)
+		log.Printf("[%s] Could not write to reset endpoint: %s", h.apiCfg.Platform, err)
 	}
 }

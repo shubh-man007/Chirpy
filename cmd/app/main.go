@@ -18,6 +18,7 @@ func main() {
 	}
 
 	connStr := os.Getenv("DB_URL")
+	platform := os.Getenv("PLATFORM")
 
 	pgx, err := database.NewDbPgx(connStr)
 	if err != nil {
@@ -27,7 +28,7 @@ func main() {
 
 	log.Print("connected to DB")
 
-	srv := server.New(port, pgx.Queries)
+	srv := server.New(port, pgx.Queries, platform)
 	if err := srv.Start(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

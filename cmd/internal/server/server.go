@@ -16,9 +16,10 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func New(port string, db *database.Queries) *Server {
+func New(port string, db *database.Queries, platform string) *Server {
 	cfg := config.NewApiCfg(db)
 	cfg.FileserverHits.Store(0)
+	cfg.Platform = platform
 
 	return &Server{
 		Port:   port,
