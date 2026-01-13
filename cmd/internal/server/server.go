@@ -36,9 +36,9 @@ func (s *Server) Routes() http.Handler {
 	fileserver := http.FileServer(http.Dir("../static"))
 	mux.Handle("/app/", http.StripPrefix("/app/", middleware.HitCounterMiddleware(s.apiCfg, fileserver)))
 
-	apiHandler := handler.NewAPIHandler(s.apiCfg.DB)
+	apiHandler := handler.NewAPIHandler(s.apiCfg)
 	mux.HandleFunc("GET /api/healthz", handler.Health)
-	mux.HandleFunc("POST /api/validate_chirp", handler.ValidateChirp)
+	mux.HandleFunc("POST /api/chirps", apiHandler.CreateChirp)
 	mux.HandleFunc("POST /api/users", apiHandler.CreateUser)
 
 	adminHandler := handler.NewAdminHandler(s.apiCfg)
