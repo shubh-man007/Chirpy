@@ -1,3 +1,13 @@
+# version: "2"
+# sql:
+#   - schema: "cmd/internal/database/migrations"
+#     queries: "cmd/internal/database/queries"
+#     engine: "postgresql"
+#     gen:
+#       go:
+#         out: "cmd/internal/database"
+#         package: "database"
+
 version: "2"
 sql:
   - schema: "cmd/internal/database/migrations"
@@ -7,3 +17,5 @@ sql:
       go:
         out: "cmd/internal/database"
         package: "database"
+        emit_json_tags: true                   
+        json_tags_case_style: "snake"           
