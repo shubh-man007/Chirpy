@@ -1,12 +1,9 @@
 package server
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/shubh-man007/Chirpy/cmd/internal/config"
 	"github.com/shubh-man007/Chirpy/cmd/internal/database"
 	"github.com/shubh-man007/Chirpy/cmd/internal/handler"
@@ -38,61 +35,10 @@ func (s *Server) Routes() http.Handler {
 	fileserver := http.FileServer(http.Dir("../static"))
 	mux.Handle("/app/", http.StripPrefix("/app/", middleware.HitCounterMiddleware(s.apiCfg, fileserver)))
 
+	apiHandler := handler.NewAPIHandler(s.apiCfg.DB)
 	mux.HandleFunc("GET /api/healthz", handler.Health)
 	mux.HandleFunc("POST /api/validate_chirp", handler.ValidateChirp)
-	mux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
-		type userEmail struct {
-			Email string `json:"email"`
-		}
-
-		decoder := json.NewDecoder(r.Body)
-		use := userEmail{}
-		err := decoder.Decode(&use)
-		if err != nil {
-			log.Printf("Error decoding request JSON: %s", err)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte("Email not found"))
-			return
-		}
-
-		email := use.Email
-		user, err := s.apiCfg.DB.CreateUser(r.Context(), email)
-		if err != nil {
-			log.Printf("Error decoding request JSON: %s", err)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte("could no create user"))
-			return
-		}
-
-		type Users struct {
-			ID        uuid.UUID `json:"id"`
-			CreatedAt time.Time `json:"created_at"`
-			UpdatedAt time.Time `json:"updated_at"`
-			Email     string    `json:"email"`
-		}
-
-		resBody := Users{
-			ID:        user.ID,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-			Email:     user.Email,
-		}
-
-		data, err := json.Marshal(resBody)
-		if err != nil {
-			log.Printf("Error encoding response JSON: %s", err)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte("could no marshal user"))
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-	})
+	mux.HandleFunc("POST /api/users", apiHandler.CreateUser)
 
 	adminHandler := handler.NewAdminHandler(s.apiCfg)
 	mux.HandleFunc("GET /admin/metrics", adminHandler.Metrics)
