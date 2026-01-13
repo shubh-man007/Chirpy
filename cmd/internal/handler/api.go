@@ -4,27 +4,35 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
+	"github.com/shubh-man007/Chirpy/cmd/internal/config"
 	"github.com/shubh-man007/Chirpy/cmd/internal/database"
 )
 
+const (
+	maxChirpLength = 140
+	asterisk       = "****"
+)
+
 var profane = []string{"kerfuffle", "sharbert", "fornax"}
-var astrix = "****"
 
 type APIHandler struct {
-	db *database.Queries
+	cfg *config.ApiConfig
 }
 
-func NewAPIHandler(db *database.Queries) *APIHandler {
+func NewAPIHandler(cfg *config.ApiConfig) *APIHandler {
 	return &APIHandler{
-		db: db,
+		cfg: cfg,
 	}
 }
 
 type ChirpBody struct {
-	Body string `json:"body"`
+	Body   string `json:"body"`
+	UserID string `json:"user_id"`
 }
 
 type ChirpLenValid struct {
@@ -56,7 +64,29 @@ func respondJSON(w http.ResponseWriter, code int, payload any) {
 	}
 }
 
-func ValidateChirp(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var req userEmail
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Error decoding request JSON: %s", err)
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Invalid request body",
+		})
+		return
+	}
+
+	user, err := h.cfg.DB.CreateUser(r.Context(), req.Email)
+	if err != nil {
+		log.Printf("Error creating user: %s", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{
+			Message: "Could not create user",
+		})
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, user)
+}
+
+func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	chirp := ChirpBody{}
 	err := decoder.Decode(&chirp)
@@ -68,45 +98,47 @@ func ValidateChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chirpData := chirp.Body
-
-	for _, prof := range profane {
-		if strings.Contains(chirpData, prof) {
-			chirpData = strings.ReplaceAll(chirpData, prof, astrix)
-		}
-	}
-
-	if utf8.RuneCountInString(chirpData) > 140 {
+	if utf8.RuneCountInString(chirp.Body) > maxChirpLength {
 		errJSON(w, http.StatusBadRequest, ErrMessage{
 			Message: "Chirp too long",
 		})
 		return
 	}
 
-	respondJSON(w, http.StatusOK, ChirpLenValid{
-		Body:    chirpData,
-		Message: true,
+	cleanChirpBody := cleanProfanity(chirp.Body)
+
+	userID, err := uuid.Parse(chirp.UserID)
+	if err != nil {
+		log.Printf("Could not parse User ID: %s", err)
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Could not parse User ID",
+		})
+		return
+	}
+
+	valChirp, err := h.cfg.DB.CreateChirp(r.Context(), database.CreateChirpParams{
+		Body:   cleanChirpBody,
+		UserID: userID,
 	})
+
+	if err != nil {
+		log.Printf("Error creating chirp: %s", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{
+			Message: "Failed to create chirp",
+		})
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, valChirp)
 }
 
-func (h *APIHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	var req userEmail
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("Error decoding request JSON: %s", err)
-		errJSON(w, http.StatusBadRequest, ErrMessage{
-			Message: "Invalid request body",
-		})
-		return
+func cleanProfanity(text string) string {
+	words := strings.Split(text, " ")
+	for i, word := range words {
+		cleanWord := strings.ToLower(strings.Trim(word, ".,!?;:"))
+		if slices.Contains(profane, cleanWord) {
+			words[i] = asterisk
+		}
 	}
-
-	user, err := h.db.CreateUser(r.Context(), req.Email)
-	if err != nil {
-		log.Printf("Error creating user: %s", err)
-		errJSON(w, http.StatusInternalServerError, ErrMessage{
-			Message: "Could not create user",
-		})
-		return
-	}
-
-	respondJSON(w, http.StatusCreated, user)
+	return strings.Join(words, " ")
 }
