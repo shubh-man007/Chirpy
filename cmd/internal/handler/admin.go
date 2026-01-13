@@ -76,7 +76,8 @@ func (h *AdminHandler) Metrics(w http.ResponseWriter, r *http.Request) {
 func (h *AdminHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	if h.apiCfg.Platform == "dev" {
 		if err := h.apiCfg.DB.DeleteUser(r.Context()); err != nil {
-			http.Error(w, "failed to reset users", http.StatusInternalServerError)
+			log.Printf("Error deleting users: %v", err)
+			http.Error(w, fmt.Sprintf("failed to reset users: %v", err), http.StatusInternalServerError)
 			return
 		}
 
