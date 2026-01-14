@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"slices"
@@ -77,9 +78,7 @@ func (h *APIHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	user, err := h.cfg.DB.CreateUser(r.Context(), req.Email)
 	if err != nil {
 		log.Printf("Error creating user: %s", err)
-		errJSON(w, http.StatusInternalServerError, ErrMessage{
-			Message: "Could not create user",
-		})
+		http.Error(w, fmt.Sprintf("error creating user: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -123,15 +122,25 @@ func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Printf("Error creating chirp: %s", err)
-		errJSON(w, http.StatusInternalServerError, ErrMessage{
-			Message: "Failed to create chirp",
-		})
+		http.Error(w, fmt.Sprintf("error creating chirp: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	respondJSON(w, http.StatusCreated, valChirp)
 }
 
+func (h *APIHandler) GetAllChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, err := h.cfg.DB.GetAllChirps(r.Context())
+	if err != nil {
+		log.Printf("Error fetching chirps: %s", err)
+		http.Error(w, fmt.Sprintf("error fetching chirps: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, chirps)
+}
+
+// utility:
 func cleanProfanity(text string) string {
 	words := strings.Split(text, " ")
 	for i, word := range words {
