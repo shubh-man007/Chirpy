@@ -156,6 +156,13 @@ func (h *APIHandler) GetChirpsByUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(chirps) == 0 {
+		errJSON(w, http.StatusNotFound, ErrMessage{
+			Message: "No chirps found for this user",
+		})
+		return
+	}
+
 	respondJSON(w, http.StatusOK, chirps)
 }
 
