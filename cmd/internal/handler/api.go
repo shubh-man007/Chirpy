@@ -140,6 +140,25 @@ func (h *APIHandler) GetAllChirps(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, chirps)
 }
 
+func (h *APIHandler) GetChirpsByUser(w http.ResponseWriter, r *http.Request) {
+	chirpID, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		log.Printf("Could not parse chirp ID: %s", err)
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Could not parse chirp ID",
+		})
+		return
+	}
+	chirps, err := h.cfg.DB.GetChirpsByUser(r.Context(), chirpID)
+	if err != nil {
+		log.Printf("Error fetching chirps: %s", err)
+		http.Error(w, fmt.Sprintf("error fetching chirps: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, chirps)
+}
+
 // utility:
 func cleanProfanity(text string) string {
 	words := strings.Split(text, " ")
