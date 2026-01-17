@@ -58,17 +58,35 @@ func (q *Queries) DeleteUser(ctx context.Context) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT email, hashed_password FROM users WHERE email = $1
+SELECT id, created_at, updated_at, email FROM users WHERE email = $1
 `
 
 type GetUserByEmailRow struct {
-	Email          string `json:"email"`
-	HashedPassword string `json:"hashed_password"`
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
 	var i GetUserByEmailRow
-	err := row.Scan(&i.Email, &i.HashedPassword)
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+	)
 	return i, err
+}
+
+const getUserPassByEmail = `-- name: GetUserPassByEmail :one
+SELECT hashed_password FROM users WHERE email = $1
+`
+
+func (q *Queries) GetUserPassByEmail(ctx context.Context, email string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getUserPassByEmail, email)
+	var hashed_password string
+	err := row.Scan(&hashed_password)
+	return hashed_password, err
 }
