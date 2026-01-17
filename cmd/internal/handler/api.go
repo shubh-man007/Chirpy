@@ -109,6 +109,35 @@ func (h *APIHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	userCreds, err := h.cfg.DB.GetUserPassByEmail(r.Context(), req.Email)
+	if err != nil {
+		log.Printf("Error validating user: %s", err)
+		http.Error(w, fmt.Sprintf("Error validating user: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	val, err := auth.CheckPasswordHash(req.Password, userCreds)
+	if err != nil {
+		log.Printf("Unauthorized User: %s", err)
+		http.Error(w, "Unauthorized user", http.StatusUnauthorized)
+		return
+	}
+
+	if !val {
+		log.Printf("Unauthorized User: %s", err)
+		http.Error(w, "Unauthorized user", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.cfg.DB.GetUserByEmail(r.Context(), req.Email)
+	if err != nil {
+		log.Printf("Error fetching user: %s", err)
+		http.Error(w, fmt.Sprintf("error fetching chirps: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, user)
 }
 
 func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
