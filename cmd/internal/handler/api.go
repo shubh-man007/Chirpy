@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/shubh-man007/Chirpy/cmd/internal/auth"
 	"github.com/shubh-man007/Chirpy/cmd/internal/config"
 	"github.com/shubh-man007/Chirpy/cmd/internal/database"
 )
@@ -45,8 +46,9 @@ type ErrMessage struct {
 	Message string `json:"error"`
 }
 
-type userEmail struct {
-	Email string `json:"email"`
+type UserLogin struct {
+	Password string `json:"password"`
+	Email    string `json:"email"`
 }
 
 func errJSON(w http.ResponseWriter, code int, payload any) {
@@ -66,7 +68,7 @@ func respondJSON(w http.ResponseWriter, code int, payload any) {
 }
 
 func (h *APIHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	var req userEmail
+	var req UserLogin
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding request JSON: %s", err)
 		errJSON(w, http.StatusBadRequest, ErrMessage{
@@ -75,7 +77,20 @@ func (h *APIHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.cfg.DB.CreateUser(r.Context(), req.Email)
+	hashed_password, err := auth.HashPassword(req.Password)
+	if err != nil {
+		log.Printf("Error hashing password: %s", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{
+			Message: "Error hashing",
+		})
+		return
+	}
+
+	userParams := database.CreateUserParams{
+		Email:          req.Email,
+		HashedPassword: hashed_password,
+	}
+	user, err := h.cfg.DB.CreateUser(r.Context(), userParams)
 	if err != nil {
 		log.Printf("Error creating user: %s", err)
 		http.Error(w, fmt.Sprintf("error creating user: %v", err), http.StatusInternalServerError)
@@ -83,6 +98,17 @@ func (h *APIHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusCreated, user)
+}
+
+func (h *APIHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
+	var req UserLogin
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Error decoding request JSON: %s", err)
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Invalid request body",
+		})
+		return
+	}
 }
 
 func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
