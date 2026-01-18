@@ -37,11 +37,18 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("/app/", http.StripPrefix("/app/", middleware.HitCounterMiddleware(s.apiCfg, fileserver)))
 
 	//api:
-	//users:
 	apiHandler := handler.NewAPIHandler(s.apiCfg)
+
+	//readiness
 	mux.HandleFunc("GET /api/healthz", handler.Health)
+
+	//users:
 	mux.HandleFunc("POST /api/users", apiHandler.CreateUser)
+
+	//auth:
 	mux.HandleFunc("POST /api/login", apiHandler.LoginUser)
+	mux.HandleFunc("POST /api/refresh", apiHandler.RefreshToken)
+	mux.HandleFunc("POST /api/revoke", apiHandler.RevokeToken)
 
 	//chirps:
 	mux.HandleFunc("POST /api/chirps", apiHandler.CreateChirp)
