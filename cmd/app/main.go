@@ -18,6 +18,7 @@ func main() {
 	}
 
 	connStr := os.Getenv("DB_URL")
+	jwt_secret := os.Getenv("JWT_SECRET")
 	platform := os.Getenv("PLATFORM")
 
 	pgx, err := database.NewDbPgx(connStr)
@@ -28,7 +29,7 @@ func main() {
 
 	log.Print("connected to DB")
 
-	srv := server.New(port, pgx.Queries, platform)
+	srv := server.New(port, pgx.Queries, platform, jwt_secret)
 	if err := srv.Start(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
