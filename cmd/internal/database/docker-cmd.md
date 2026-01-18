@@ -121,3 +121,11 @@ protocol://username:password@host:port/database
 Example values:
 
 * **protocol:** `postgres`
+
+---
+
+## 9. Create Base64 encoded secrets:
+```
+openssl rand -base64 64 | tr -d '\n'
+```
+*Returns 64 random bytes encoded in Base64*
