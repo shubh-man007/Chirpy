@@ -1,0 +1,26 @@
+mode: set
+github.com/shubh-man007/Chirpy/cmd/internal/auth/auth.go:9.58,11.22 2 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/auth.go:11.22,13.3 1 0
+github.com/shubh-man007/Chirpy/cmd/internal/auth/auth.go:15.2,16.9 2 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/auth.go:16.9,18.3 1 0
+github.com/shubh-man007/Chirpy/cmd/internal/auth/auth.go:20.2,20.17 1 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/auth.go:20.17,22.3 1 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/auth.go:24.2,24.19 1 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/hash.go:9.52,11.16 2 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/hash.go:11.16,14.3 2 0
+github.com/shubh-man007/Chirpy/cmd/internal/auth/hash.go:16.2,16.18 1 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/hash.go:19.61,21.16 2 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/hash.go:21.16,24.3 2 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/hash.go:26.2,26.19 1 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:11.93,22.16 4 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:22.16,24.3 1 0
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:26.2,26.25 1 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:29.70,33.39 1 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:33.39,35.4 1 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:37.2,37.16 1 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:37.16,39.3 1 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:41.2,42.9 2 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:42.9,44.3 1 0
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:46.2,47.16 2 1
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:47.16,49.3 1 0
+github.com/shubh-man007/Chirpy/cmd/internal/auth/jwt.go:51.2,51.20 1 1
