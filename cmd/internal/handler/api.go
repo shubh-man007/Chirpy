@@ -77,7 +77,7 @@ func (h *APIHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashed_password, err := auth.HashPassword(req.Password)
+	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
 		log.Printf("Error hashing password: %v", err)
 		errJSON(w, http.StatusInternalServerError, ErrMessage{
@@ -88,7 +88,7 @@ func (h *APIHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	userParams := database.CreateUserParams{
 		Email:          req.Email,
-		HashedPassword: hashed_password,
+		HashedPassword: hashedPassword,
 	}
 	user, err := h.cfg.DB.CreateUser(r.Context(), userParams)
 	if err != nil {
@@ -175,6 +175,51 @@ func (h *APIHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		Token:             jwtToken,
 		RefreshToken:      refreshToken,
 	})
+}
+
+func (h *APIHandler) UpdateUserCred(w http.ResponseWriter, r *http.Request) {
+	var updateCred UserLogin
+	if err := json.NewDecoder(r.Body).Decode(&updateCred); err != nil {
+		log.Printf("Error decoding request JSON: %v", err)
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Invalid email or password",
+		})
+		return
+	}
+
+	accessToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Printf("Access token absent: %v", err)
+		http.Error(w, "Something went wrong", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(accessToken, h.cfg.JWTSecret)
+	if err != nil {
+		log.Printf("Invalid access token: %v", err)
+		http.Error(w, "Something went wrong", http.StatusUnauthorized)
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(updateCred.Password)
+	if err != nil {
+		log.Printf("Could not hash password: %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	updatedUser, err := h.cfg.DB.UpdateUserCred(r.Context(), database.UpdateUserCredParams{
+		Email:          updateCred.Email,
+		HashedPassword: hashedPassword,
+		ID:             userID,
+	})
+	if err != nil {
+		log.Printf("Could not update DB: %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, updatedUser)
 }
 
 func (h *APIHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
