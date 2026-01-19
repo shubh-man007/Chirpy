@@ -44,10 +44,10 @@ func (s *Server) Routes() http.Handler {
 
 	//users:
 	mux.HandleFunc("POST /api/users", apiHandler.CreateUser)
+	mux.HandleFunc("PUT /api/users", apiHandler.UpdateUserCred)
 
 	//auth:
 	mux.HandleFunc("POST /api/login", apiHandler.LoginUser)
-	mux.HandleFunc("PUT /api/users", apiHandler.UpdateUserCred)
 	mux.HandleFunc("POST /api/refresh", apiHandler.RefreshToken)
 	mux.HandleFunc("POST /api/revoke", apiHandler.RevokeToken)
 
