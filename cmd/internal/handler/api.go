@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"slices"
@@ -322,7 +321,7 @@ func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		log.Printf("Error creating chirp: %s", err)
+		log.Printf("Error creating chirp: %v", err)
 		http.Error(w, "Couldn't chirp", http.StatusInternalServerError)
 		return
 	}
@@ -333,8 +332,8 @@ func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
 func (h *APIHandler) GetAllChirps(w http.ResponseWriter, r *http.Request) {
 	chirps, err := h.cfg.DB.GetAllChirps(r.Context())
 	if err != nil {
-		log.Printf("Error fetching chirps: %s", err)
-		http.Error(w, fmt.Sprintf("error fetching chirps: %v", err), http.StatusInternalServerError)
+		log.Printf("Error fetching chirps: %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
@@ -344,16 +343,16 @@ func (h *APIHandler) GetAllChirps(w http.ResponseWriter, r *http.Request) {
 func (h *APIHandler) GetChirpsByUser(w http.ResponseWriter, r *http.Request) {
 	chirpID, err := uuid.Parse(r.PathValue("chirpID"))
 	if err != nil {
-		log.Printf("Could not parse chirp ID: %s", err)
+		log.Printf("Could not parse chirp ID: %v", err)
 		errJSON(w, http.StatusBadRequest, ErrMessage{
-			Message: "Could not parse chirp ID",
+			Message: "Something went wrong",
 		})
 		return
 	}
 	chirps, err := h.cfg.DB.GetChirpsByUser(r.Context(), chirpID)
 	if err != nil {
-		log.Printf("Error fetching chirps: %s", err)
-		http.Error(w, fmt.Sprintf("error fetching chirps: %v", err), http.StatusInternalServerError)
+		log.Printf("Error fetching chirps: %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
@@ -365,6 +364,56 @@ func (h *APIHandler) GetChirpsByUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, chirps)
+}
+
+func (h *APIHandler) DeleteChirp(w http.ResponseWriter, r *http.Request) {
+	accessToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Printf("Accent token absent: %v", err)
+		errJSON(w, http.StatusUnauthorized, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(accessToken, h.cfg.JWTSecret)
+	if err != nil {
+		log.Printf("Invalid access token: %v", err)
+		errJSON(w, http.StatusUnauthorized, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	chirpID, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		log.Printf("Could not parse chirp ID: %v", err)
+		errJSON(w, http.StatusNotFound, ErrMessage{
+			Message: "Chirp not found",
+		})
+		return
+	}
+
+	user, err := h.cfg.DB.GetChirp(r.Context(), chirpID)
+	if err != nil {
+		log.Printf("Error fetching chirp: %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	if user.ID != userID {
+		log.Print("Unauthorized user cannot delete chirp")
+		http.Error(w, "Unauthorized User", http.StatusForbidden)
+		return
+	}
+
+	err = h.cfg.DB.DeleteChirp(r.Context(), chirpID)
+	if err != nil {
+		log.Printf("Error deleting chirp: %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // utility:
