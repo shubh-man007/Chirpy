@@ -55,6 +55,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/chirps", apiHandler.CreateChirp)
 	mux.HandleFunc("GET /api/chirps", apiHandler.GetAllChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiHandler.GetChirpsByUser)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiHandler.DeleteChirp)
 
 	//admin:
 	adminHandler := handler.NewAdminHandler(s.apiCfg)
