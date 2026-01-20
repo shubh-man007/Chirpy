@@ -57,6 +57,9 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiHandler.GetChirpsByUser)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiHandler.DeleteChirp)
 
+	//webhook:
+	mux.HandleFunc("POST /api/polka/webhooks", apiHandler.UpdateUserMembership)
+
 	//admin:
 	adminHandler := handler.NewAdminHandler(s.apiCfg)
 	mux.HandleFunc("GET /admin/metrics", adminHandler.Metrics)
