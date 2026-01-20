@@ -46,6 +46,15 @@ type ChirpLenValid struct {
 	Message bool   `json:"valid"`
 }
 
+type MembershipWebhookData struct {
+	UserID string `json:"user_id"`
+}
+
+type MembershipWebhookEvent struct {
+	Event string                `json:"event"`
+	Data  MembershipWebhookData `json:"data"`
+}
+
 type ErrMessage struct {
 	Message string `json:"error"`
 }
@@ -178,7 +187,8 @@ func (h *APIHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *APIHandler) UpdateUserCred(w http.ResponseWriter, r *http.Request) {
 	var updateCred UserLogin
-	if err := json.NewDecoder(r.Body).Decode(&updateCred); err != nil {
+	err := json.NewDecoder(r.Body).Decode(&updateCred)
+	if err != nil {
 		log.Printf("Error decoding request JSON: %v", err)
 		errJSON(w, http.StatusBadRequest, ErrMessage{
 			Message: "Invalid email or password",
@@ -277,9 +287,8 @@ func (h *APIHandler) RevokeToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
 	chirp := ChirpBody{}
-	err := decoder.Decode(&chirp)
+	err := json.NewDecoder(r.Body).Decode(&chirp)
 	if err != nil {
 		log.Printf("Error decoding requested JSON: %v", err)
 		errJSON(w, http.StatusInternalServerError, ErrMessage{
@@ -413,6 +422,40 @@ func (h *APIHandler) DeleteChirp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *APIHandler) UpdateUserMembership(w http.ResponseWriter, r *http.Request) {
+	webhookEvent := MembershipWebhookEvent{}
+	err := json.NewDecoder(r.Body).Decode(&webhookEvent)
+	if err != nil {
+		log.Printf("Error decoding webhook event: %v", err)
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Something went wrong",
+		})
+		return
+	}
+
+	event := webhookEvent.Event
+	if event != "user.upgraded" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	userID, err := uuid.Parse(webhookEvent.Data.UserID)
+	if err != nil {
+		log.Printf("Could not parse userID in webhook event: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = h.cfg.DB.UpdateUserToChirpyRed(r.Context(), userID)
+	if err != nil {
+		log.Printf("User not found: %v", err)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
