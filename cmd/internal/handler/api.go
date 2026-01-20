@@ -436,6 +436,19 @@ func (h *APIHandler) UpdateUserMembership(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		log.Printf("API Key absent: %v", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	if apiKey != h.cfg.PolkaAPIKey {
+		log.Printf("Invalid API Key: %v", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	event := webhookEvent.Event
 	if event != "user.upgraded" {
 		w.WriteHeader(http.StatusNoContent)

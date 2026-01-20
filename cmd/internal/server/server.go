@@ -16,8 +16,8 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func New(port string, db *database.Queries, platform string, jwt_secret string) *Server {
-	cfg := config.NewApiCfg(db, platform, jwt_secret)
+func New(port string, db *database.Queries, platform string, jwtSecret string, polkaAPI string) *Server {
+	cfg := config.NewApiCfg(db, platform, jwtSecret, polkaAPI)
 	cfg.FileserverHits.Store(0)
 
 	return &Server{
