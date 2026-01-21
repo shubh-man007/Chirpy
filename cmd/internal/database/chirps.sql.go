@@ -132,3 +132,29 @@ func (q *Queries) GetChirpsByUser(ctx context.Context, userID uuid.UUID) ([]Chir
 	}
 	return items, nil
 }
+
+const updateChirpBody = `-- name: UpdateChirpBody :one
+UPDATE chirps
+SET body = $1,
+    updated_at = NOW()
+WHERE id = $2
+RETURNING id, created_at, updated_at, body, user_id
+`
+
+type UpdateChirpBodyParams struct {
+	Body string    `json:"body"`
+	ID   uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateChirpBody(ctx context.Context, arg UpdateChirpBodyParams) (Chirp, error) {
+	row := q.db.QueryRowContext(ctx, updateChirpBody, arg.Body, arg.ID)
+	var i Chirp
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Body,
+		&i.UserID,
+	)
+	return i, err
+}
