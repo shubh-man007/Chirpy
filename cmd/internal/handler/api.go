@@ -406,10 +406,87 @@ func (h *APIHandler) GetChirpByID(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, chirps)
 }
 
+func (h *APIHandler) UpdateChirp(w http.ResponseWriter, r *http.Request) {
+	chirpIDStr := r.PathValue("chirpID")
+	chirpID, err := uuid.Parse(chirpIDStr)
+	if err != nil {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid chirp ID"})
+		return
+	}
+
+	accessToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Printf("Access token absent: %v", err)
+		errJSON(w, http.StatusUnauthorized, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(accessToken, h.cfg.JWTSecret)
+	if err != nil {
+		log.Printf("Invalid access token: %v", err)
+		errJSON(w, http.StatusUnauthorized, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	user, err := h.cfg.DB.GetUserByID(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error fetching user: %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	if !user.IsChirpyRed {
+		log.Print("User not allowed to edit chirp")
+		errJSON(w, http.StatusForbidden, ErrMessage{
+			Message: "Only Chirpy Red members can edit chirps",
+		})
+		return
+	}
+
+	diff := ChirpBody{}
+	err = json.NewDecoder(r.Body).Decode(&diff)
+	if err != nil {
+		log.Printf("Error decoding requested JSON: %v", err)
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Something went wrong",
+		})
+		return
+	}
+
+	existing, err := h.cfg.DB.GetChirp(r.Context(), chirpID)
+	if err != nil {
+		errJSON(w, http.StatusNotFound, ErrMessage{Message: "Chirp not found"})
+		return
+	}
+
+	if existing.UserID != userID {
+		errJSON(w, http.StatusForbidden, ErrMessage{
+			Message: "Not allowed to edit this chirp",
+		})
+		return
+	}
+
+	updatedChirp, err := h.cfg.DB.UpdateChirpBody(r.Context(), database.UpdateChirpBodyParams{
+		Body: diff.Body,
+		ID:   chirpID,
+	})
+	if err != nil {
+		log.Printf("Error updating chirp: %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, updatedChirp)
+}
+
 func (h *APIHandler) DeleteChirp(w http.ResponseWriter, r *http.Request) {
 	accessToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		log.Printf("Accent token absent: %v", err)
+		log.Printf("Access token absent: %v", err)
 		errJSON(w, http.StatusUnauthorized, ErrMessage{
 			Message: "Unauthorized",
 		})
@@ -434,14 +511,14 @@ func (h *APIHandler) DeleteChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.cfg.DB.GetChirp(r.Context(), chirpID)
+	chirp, err := h.cfg.DB.GetChirp(r.Context(), chirpID)
 	if err != nil {
 		log.Printf("Error fetching chirp: %v", err)
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		http.Error(w, "Something went wrong", http.StatusNotFound)
 		return
 	}
 
-	if user.ID != userID {
+	if chirp.UserID != userID {
 		log.Print("Unauthorized user cannot delete chirp")
 		http.Error(w, "Unauthorized User", http.StatusForbidden)
 		return
