@@ -18,9 +18,6 @@ SELECT id, created_at, updated_at, email, is_chirpy_red FROM users WHERE email =
 -- name: GetUserPassByEmail :one
 SELECT hashed_password FROM users WHERE email = $1;
 
--- name: DeleteUser :exec
-DELETE FROM users;
-
 -- name: UpdateUserCred :one
 UPDATE users
 SET updated_at = NOW(),
@@ -34,3 +31,9 @@ UPDATE users
 SET is_chirpy_red = TRUE,
     updated_at = NOW()
 WHERE id = $1;
+
+-- name: DeleteUser :exec
+DELETE FROM users;
+
+-- name: DeleteUserByID :exec
+DELETE FROM users WHERE id = $1;
