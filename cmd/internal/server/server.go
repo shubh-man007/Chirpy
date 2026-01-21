@@ -45,6 +45,7 @@ func (s *Server) Routes() http.Handler {
 	//users:
 	mux.HandleFunc("POST /api/users", apiHandler.CreateUser)
 	mux.HandleFunc("PUT /api/users", apiHandler.UpdateUserCred)
+	mux.HandleFunc("DELETE /api/users/{userID}", apiHandler.DeleteUser)
 
 	//auth:
 	mux.HandleFunc("POST /api/login", apiHandler.LoginUser)
