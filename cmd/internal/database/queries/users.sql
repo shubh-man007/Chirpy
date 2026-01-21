@@ -9,11 +9,14 @@ VALUES (
 )
 RETURNING id, created_at, updated_at, email, is_chirpy_red;
 
--- name: GetUserPassByEmail :one
-SELECT hashed_password FROM users WHERE email = $1;
+-- name: GetUserByID :one
+SELECT id, created_at, updated_at, email, is_chirpy_red FROM users WHERE id = $1;
 
 -- name: GetUserByEmail :one
 SELECT id, created_at, updated_at, email, is_chirpy_red FROM users WHERE email = $1;
+
+-- name: GetUserPassByEmail :one
+SELECT hashed_password FROM users WHERE email = $1;
 
 -- name: DeleteUser :exec
 DELETE FROM users;

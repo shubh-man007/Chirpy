@@ -18,5 +18,12 @@ SELECT * FROM chirps ORDER BY created_at ASC;
 -- name: GetChirpsByUser :many
 SELECT * FROM chirps WHERE user_id = $1 ORDER BY created_at DESC;
 
+-- name: UpdateChirpBody :one
+UPDATE chirps
+SET body = $1,
+    updated_at = NOW()
+WHERE id = $2
+RETURNING * ;
+
 -- name: DeleteChirp :exec
 DELETE FROM chirps WHERE id = $1;
