@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -341,33 +342,47 @@ func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
 func (h *APIHandler) GetAllChirps(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	userID := query.Get("user_id")
-	if userID == "" {
-		chirps, err := h.cfg.DB.GetAllChirps(r.Context())
+	sortOrder := query.Get("sort")
+
+	if sortOrder == "" {
+		sortOrder = "asc"
+	}
+
+	var chirps []database.Chirp
+	var err error
+
+	if userID != "" {
+		userUUID, err := uuid.Parse(userID)
+		if err != nil {
+			log.Printf("Invalid user_id query param: %v", err)
+			errJSON(w, http.StatusBadRequest, ErrMessage{
+				Message: "invalid user_id",
+			})
+			return
+		}
+
+		chirps, err = h.cfg.DB.GetChirpsByUser(r.Context(), userUUID)
+		if err != nil {
+			log.Printf("Error fetching chirps by user: %v", err)
+			http.Error(w, "Something went wrong", http.StatusNotFound)
+			return
+		}
+	} else {
+		chirps, err = h.cfg.DB.GetAllChirps(r.Context())
 		if err != nil {
 			log.Printf("Error fetching chirps: %v", err)
 			http.Error(w, "Something went wrong", http.StatusInternalServerError)
 			return
 		}
-
-		respondJSON(w, http.StatusOK, chirps)
-		return
 	}
 
-	userIDParsed, err := uuid.Parse(userID)
-	if err != nil {
-		log.Printf("Could not parse user ID: %v", err)
-		errJSON(w, http.StatusBadRequest, ErrMessage{
-			Message: "Something went wrong",
-		})
-		return
-	}
-
-	chirps, err := h.cfg.DB.GetChirpsByUser(r.Context(), userIDParsed)
-	if err != nil {
-		log.Printf("Error fetching chirps: %v", err)
-		http.Error(w, "Something went wrong", http.StatusNotFound)
-		return
-	}
+	sort.Slice(chirps, func(i, j int) bool {
+		if sortOrder == "desc" {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+		}
+		// default: asc
+		return chirps[i].CreatedAt.Before(chirps[j].CreatedAt)
+	})
 
 	respondJSON(w, http.StatusOK, chirps)
 }
