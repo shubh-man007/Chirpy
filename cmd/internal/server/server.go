@@ -55,6 +55,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/chirps", apiHandler.CreateChirp)
 	mux.HandleFunc("GET /api/chirps", apiHandler.GetAllChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiHandler.GetChirpByID)
+	mux.HandleFunc("PATCH /api/chirps/{chirpID}", apiHandler.UpdateChirp)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiHandler.DeleteChirp)
 
 	//webhook:
