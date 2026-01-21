@@ -287,6 +287,51 @@ func (h *APIHandler) RevokeToken(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *APIHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	pathUserID, err := uuid.Parse(r.PathValue("userID"))
+	if err != nil {
+		log.Printf("Could not parse user ID: %v", err)
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Something went wrong",
+		})
+		return
+	}
+
+	accessToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Printf("Access token absent: %v", err)
+		errJSON(w, http.StatusUnauthorized, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(accessToken, h.cfg.JWTSecret)
+	if err != nil {
+		log.Printf("Invalid access token: %v", err)
+		errJSON(w, http.StatusUnauthorized, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	if pathUserID != userID {
+		log.Print("UserID not matched with ID sent via path")
+		errJSON(w, http.StatusForbidden, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	err = h.cfg.DB.DeleteUserByID(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error deleting user: %v", err)
+		http.Error(w, "Something went wrong", http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
 	chirp := ChirpBody{}
 	err := json.NewDecoder(r.Body).Decode(&chirp)
