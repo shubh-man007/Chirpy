@@ -821,7 +821,6 @@ func (h *APIHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 		UserID:   userID,
 		FriendID: friendID,
 	})
-
 	if err != nil {
 		log.Printf("Error removing friendship: %v", err)
 		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to remove friendship"})
@@ -833,7 +832,72 @@ func (h *APIHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *APIHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
 
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	friends, err := h.cfg.DB.GetFriends(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error fetching friends: %v", err)
+		http.Error(w, "Something went wrong", http.StatusNotFound)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, friends)
+}
+
+func (h *APIHandler) GetPendingFriendRequests(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	pendingFriends, err := h.cfg.DB.GetPendingRequests(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error fetching friends: %v", err)
+		http.Error(w, "Something went wrong", http.StatusNotFound)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, pendingFriends)
+}
+
+func (h *APIHandler) GetSentFriendRequests(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	sentFriends, err := h.cfg.DB.GetSentRequests(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error fetching friends: %v", err)
+		http.Error(w, "Something went wrong", http.StatusNotFound)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, sentFriends)
 }
 
 func (h *APIHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
