@@ -76,6 +76,7 @@ func respondJSON(w http.ResponseWriter, code int, payload any) {
 	}
 }
 
+// users
 func (h *APIHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req UserLogin
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -332,6 +333,7 @@ func (h *APIHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// chirps
 func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
 	chirp := ChirpBody{}
 	err := json.NewDecoder(r.Body).Decode(&chirp)
@@ -386,39 +388,62 @@ func (h *APIHandler) CreateChirp(w http.ResponseWriter, r *http.Request) {
 
 func (h *APIHandler) GetAllChirps(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	userID := query.Get("user_id")
 	sortOrder := query.Get("sort")
 
 	if sortOrder == "" {
 		sortOrder = "asc"
 	}
 
-	var chirps []database.Chirp
-	var err error
+	chirps, err := h.cfg.DB.GetAllChirps(r.Context())
+	if err != nil {
+		log.Printf("Error fetching chirps: %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
 
-	if userID != "" {
-		userUUID, err := uuid.Parse(userID)
-		if err != nil {
-			log.Printf("Invalid user_id query param: %v", err)
-			errJSON(w, http.StatusBadRequest, ErrMessage{
-				Message: "invalid user_id",
-			})
-			return
+	sort.Slice(chirps, func(i, j int) bool {
+		if sortOrder == "desc" {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
 		}
 
-		chirps, err = h.cfg.DB.GetChirpsByUser(r.Context(), userUUID)
-		if err != nil {
-			log.Printf("Error fetching chirps by user: %v", err)
-			http.Error(w, "Something went wrong", http.StatusNotFound)
-			return
-		}
-	} else {
-		chirps, err = h.cfg.DB.GetAllChirps(r.Context())
-		if err != nil {
-			log.Printf("Error fetching chirps: %v", err)
-			http.Error(w, "Something went wrong", http.StatusInternalServerError)
-			return
-		}
+		// default: asc
+		return chirps[i].CreatedAt.Before(chirps[j].CreatedAt)
+	})
+
+	respondJSON(w, http.StatusOK, chirps)
+}
+
+func (h *APIHandler) GetMyChirps(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	sortOrder := query.Get("sort")
+
+	if sortOrder == "" {
+		sortOrder = "asc"
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Printf("Access token absent: %v", err)
+		errJSON(w, http.StatusUnauthorized, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		log.Printf("Invalid access token: %v", err)
+		errJSON(w, http.StatusUnauthorized, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	chirps, err := h.cfg.DB.GetChirpsByUser(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error fetching chirps: %v", err)
+		http.Error(w, "Something went wrong", http.StatusNotFound)
+		return
 	}
 
 	sort.Slice(chirps, func(i, j int) bool {
@@ -432,7 +457,42 @@ func (h *APIHandler) GetAllChirps(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, chirps)
 }
 
-func (h *APIHandler) GetChirpByID(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) GetChirpsByUser(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	sortOrder := query.Get("sort")
+
+	if sortOrder == "" {
+		sortOrder = "asc"
+	}
+
+	userID, err := uuid.Parse(r.PathValue("userID"))
+	if err != nil {
+		log.Printf("Could not parse user ID: %v", err)
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Something went wrong",
+		})
+		return
+	}
+
+	chirps, err := h.cfg.DB.GetChirpsByUser(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error fetching chirps: %v", err)
+		http.Error(w, "Something went wrong", http.StatusNotFound)
+		return
+	}
+
+	sort.Slice(chirps, func(i, j int) bool {
+		if sortOrder == "desc" {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+		}
+		// default: asc
+		return chirps[i].CreatedAt.Before(chirps[j].CreatedAt)
+	})
+
+	respondJSON(w, http.StatusOK, chirps)
+}
+
+func (h *APIHandler) GetChirpByChirpID(w http.ResponseWriter, r *http.Request) {
 	chirpID, err := uuid.Parse(r.PathValue("chirpID"))
 	if err != nil {
 		log.Printf("Could not parse chirp ID: %v", err)
@@ -441,14 +501,14 @@ func (h *APIHandler) GetChirpByID(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	chirps, err := h.cfg.DB.GetChirp(r.Context(), chirpID)
+	chirp, err := h.cfg.DB.GetChirp(r.Context(), chirpID)
 	if err != nil {
 		log.Printf("Error fetching chirps: %v", err)
 		http.Error(w, "Something went wrong", http.StatusNotFound)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, chirps)
+	respondJSON(w, http.StatusOK, chirp)
 }
 
 func (h *APIHandler) UpdateChirp(w http.ResponseWriter, r *http.Request) {
@@ -578,6 +638,7 @@ func (h *APIHandler) DeleteChirp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Membership
 func (h *APIHandler) UpdateUserMembership(w http.ResponseWriter, r *http.Request) {
 	webhookEvent := MembershipWebhookEvent{}
 	err := json.NewDecoder(r.Body).Decode(&webhookEvent)
@@ -623,6 +684,186 @@ func (h *APIHandler) UpdateUserMembership(w http.ResponseWriter, r *http.Request
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// friends
+func (h *APIHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	var req struct {
+		FriendID string `json:"friend_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid request"})
+		return
+	}
+
+	friendID, err := uuid.Parse(req.FriendID)
+	if err != nil {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid user ID"})
+		return
+	}
+
+	if userID == friendID {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Cannot send friend request to yourself"})
+		return
+	}
+
+	friendship, err := h.cfg.DB.CreateFriendRequest(r.Context(), database.CreateFriendRequestParams{
+		UserID:   userID,
+		FriendID: friendID,
+	})
+	if err != nil {
+		log.Printf("Error creating friend request: %v", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to send friend request"})
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, friendship)
+}
+
+func (h *APIHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	friendIDStr := r.PathValue("userID")
+	friendID, err := uuid.Parse(friendIDStr)
+	if err != nil {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid user ID"})
+		return
+	}
+
+	err = h.cfg.DB.AcceptFriendRequest(r.Context(), database.AcceptFriendRequestParams{
+		UserID:   userID,
+		FriendID: friendID,
+	})
+	if err != nil {
+		log.Printf("Error accepting friend request: %v", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to accept friend request"})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *APIHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	friendIDStr := r.PathValue("userID")
+	friendID, err := uuid.Parse(friendIDStr)
+	if err != nil {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid user ID"})
+		return
+	}
+
+	err = h.cfg.DB.RejectFriendRequest(r.Context(), database.RejectFriendRequestParams{
+		UserID:   userID,
+		FriendID: friendID,
+	})
+	if err != nil {
+		log.Printf("Error rejecting friend request: %v", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to reject friend request"})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *APIHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	friendIDStr := r.PathValue("userID")
+	friendID, err := uuid.Parse(friendIDStr)
+	if err != nil {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid user ID"})
+		return
+	}
+
+	err = h.cfg.DB.RemoveFriendship(r.Context(), database.RemoveFriendshipParams{
+		UserID:   userID,
+		FriendID: friendID,
+	})
+
+	if err != nil {
+		log.Printf("Error removing friendship: %v", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to remove friendship"})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+}
+
+func (h *APIHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (h *APIHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	limit := int32(20)
+	offset := int32(0)
+
+	chirps, err := h.cfg.DB.GetFriendFeed(r.Context(), database.GetFriendFeedParams{
+		UserID: userID,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		log.Printf("Error fetching feed: %v", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to fetch feed"})
+		return
+	}
+
+	respondJSON(w, http.StatusOK, chirps)
 }
 
 // utility:
