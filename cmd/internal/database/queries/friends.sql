@@ -6,12 +6,12 @@ RETURNING *;
 -- name: AcceptFriendRequest :exec
 UPDATE friendships
 SET status = 'accepted', updated_at = NOW()
-WHERE user_id = $1 AND friend_id = $2 AND status = 'pending';
+WHERE user_id = $2 AND friend_id = $1 AND status = 'pending';
 
 -- name: RejectFriendRequest :exec
 UPDATE friendships
 SET status = 'rejected', updated_at = NOW()
-WHERE user_id = $1 AND friend_id = $2 AND status = 'pending';
+WHERE user_id = $2 AND friend_id = $1 AND status = 'pending';
 
 -- name: BlockUser :exec
 INSERT INTO friendships (user_id, friend_id, status)
@@ -67,6 +67,7 @@ SELECT EXISTS(
 -- name: GetFriendshipStatus :one
 SELECT status FROM friendships
 WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
+ORDER BY updated_at DESC
 LIMIT 1;
 
 -- name: GetFriendFeed :many
