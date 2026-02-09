@@ -15,16 +15,16 @@ import (
 const acceptFriendRequest = `-- name: AcceptFriendRequest :exec
 UPDATE friendships
 SET status = 'accepted', updated_at = NOW()
-WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'
+WHERE user_id = $2 AND friend_id = $1 AND status = 'pending'
 `
 
 type AcceptFriendRequestParams struct {
-	UserID   uuid.UUID `json:"user_id"`
 	FriendID uuid.UUID `json:"friend_id"`
+	UserID   uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) AcceptFriendRequest(ctx context.Context, arg AcceptFriendRequestParams) error {
-	_, err := q.db.ExecContext(ctx, acceptFriendRequest, arg.UserID, arg.FriendID)
+	_, err := q.db.ExecContext(ctx, acceptFriendRequest, arg.FriendID, arg.UserID)
 	return err
 }
 
@@ -212,6 +212,7 @@ func (q *Queries) GetFriends(ctx context.Context, userID uuid.UUID) ([]GetFriend
 const getFriendshipStatus = `-- name: GetFriendshipStatus :one
 SELECT status FROM friendships
 WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
+ORDER BY updated_at DESC
 LIMIT 1
 `
 
@@ -316,16 +317,16 @@ func (q *Queries) GetSentRequests(ctx context.Context, userID uuid.UUID) ([]GetS
 const rejectFriendRequest = `-- name: RejectFriendRequest :exec
 UPDATE friendships
 SET status = 'rejected', updated_at = NOW()
-WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'
+WHERE user_id = $2 AND friend_id = $1 AND status = 'pending'
 `
 
 type RejectFriendRequestParams struct {
-	UserID   uuid.UUID `json:"user_id"`
 	FriendID uuid.UUID `json:"friend_id"`
+	UserID   uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) RejectFriendRequest(ctx context.Context, arg RejectFriendRequestParams) error {
-	_, err := q.db.ExecContext(ctx, rejectFriendRequest, arg.UserID, arg.FriendID)
+	_, err := q.db.ExecContext(ctx, rejectFriendRequest, arg.FriendID, arg.UserID)
 	return err
 }
 
