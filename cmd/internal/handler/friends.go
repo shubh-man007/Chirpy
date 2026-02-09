@@ -33,12 +33,37 @@ func (h *APIHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request) {
 
 	friendID, err := uuid.Parse(req.FriendID)
 	if err != nil {
-		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid user ID"})
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid user ID format"})
 		return
 	}
 
 	if userID == friendID {
 		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Cannot send friend request to yourself"})
+		return
+	}
+
+	_, err = h.cfg.DB.GetUserByID(r.Context(), friendID)
+	if err != nil {
+		log.Printf("Friend user not found: %v", err)
+		errJSON(w, http.StatusNotFound, ErrMessage{Message: "User not found"})
+		return
+	}
+
+	areFriends, err := h.cfg.DB.AreFriends(r.Context(), database.AreFriendsParams{
+		UserID:   userID,
+		FriendID: friendID,
+	})
+	if err == nil && areFriends {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Already friends with this user"})
+		return
+	}
+
+	status, err := h.cfg.DB.GetFriendshipStatus(r.Context(), database.GetFriendshipStatusParams{
+		UserID:   userID,
+		FriendID: friendID,
+	})
+	if err == nil && status == "pending" {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Friend request already sent"})
 		return
 	}
 
@@ -75,7 +100,7 @@ func (h *APIHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = h.cfg.DB.AcceptFriendRequest(r.Context(), database.AcceptFriendRequestParams{
+	err = h.cfg.DB.AcceptFriendRequestSafely(r.Context(), database.AcceptFriendRequestParams{
 		UserID:   userID,
 		FriendID: friendID,
 	})
