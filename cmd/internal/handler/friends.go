@@ -106,16 +106,17 @@ func (h *APIHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Request)
 		UserID:   userID,
 		FriendID: friendID,
 	})
-	if errors.Is(err, sql.ErrNoRows) {
-		errJSON(w, http.StatusNotFound, ErrMessage{
-			Message: "No pending friend request from this user",
-		})
-		return
-	}
 	if err != nil {
-		log.Printf("Error accepting friend request: %v", err)
-		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to accept friend request"})
-		return
+		if errors.Is(err, sql.ErrNoRows) {
+			errJSON(w, http.StatusNotFound, ErrMessage{
+				Message: "No pending friend request from this user",
+			})
+			return
+		} else {
+			log.Printf("Error accepting friend request: %v", err)
+			errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to accept friend request"})
+			return
+		}
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -140,14 +141,21 @@ func (h *APIHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = h.cfg.DB.RejectFriendRequest(r.Context(), database.RejectFriendRequestParams{
+	err = h.cfg.DB.RejectFriendRequestSafely(r.Context(), database.RejectFriendRequestParams{
 		UserID:   userID,
 		FriendID: friendID,
 	})
 	if err != nil {
-		log.Printf("Error rejecting friend request: %v", err)
-		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to reject friend request"})
-		return
+		if errors.Is(err, sql.ErrNoRows) {
+			errJSON(w, http.StatusNotFound, ErrMessage{
+				Message: "No pending friend request from this user",
+			})
+			return
+		} else {
+			log.Printf("Error rejecting friend request: %v", err)
+			errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to reject friend request"})
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
