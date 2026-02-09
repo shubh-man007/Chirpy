@@ -43,12 +43,12 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/healthz", handler.Health)
 
 	//users:
+	mux.HandleFunc("POST /api/login", apiHandler.LoginUser)
 	mux.HandleFunc("POST /api/users", apiHandler.CreateUser)
 	mux.HandleFunc("PUT /api/users", apiHandler.UpdateUserCred)
 	mux.HandleFunc("DELETE /api/users/{userID}", apiHandler.DeleteUser)
 
 	//auth:
-	mux.HandleFunc("POST /api/login", apiHandler.LoginUser)
 	mux.HandleFunc("POST /api/refresh", apiHandler.RefreshToken)
 	mux.HandleFunc("POST /api/revoke", apiHandler.RevokeToken)
 
@@ -63,9 +63,9 @@ func (s *Server) Routes() http.Handler {
 
 	// Friends endpoints
 	mux.HandleFunc("POST /api/friends/request", apiHandler.SendFriendRequest)
-	mux.HandleFunc("POST /api/friends/{user_id}/accept", apiHandler.AcceptFriendRequest)
-	mux.HandleFunc("POST /api/friends/{user_id}/reject", apiHandler.RejectFriendRequest)
-	mux.HandleFunc("DELETE /api/friends/{user_id}", apiHandler.RemoveFriend)
+	mux.HandleFunc("POST /api/friends/{userID}/accept", apiHandler.AcceptFriendRequest)
+	mux.HandleFunc("POST /api/friends/{userID}/reject", apiHandler.RejectFriendRequest)
+	mux.HandleFunc("DELETE /api/friends/{userID}", apiHandler.RemoveFriend)
 	mux.HandleFunc("GET /api/friends", apiHandler.GetFriends)
 	mux.HandleFunc("GET /api/friends/requests", apiHandler.GetPendingFriendRequests)
 	mux.HandleFunc("GET /api/friends/sent", apiHandler.GetSentFriendRequests)
