@@ -61,7 +61,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("PATCH /api/chirps/{chirpID}", apiHandler.UpdateChirp)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiHandler.DeleteChirp)
 
-	// Friends endpoints
+	// friends:
 	mux.HandleFunc("POST /api/friends/request", apiHandler.SendFriendRequest)
 	mux.HandleFunc("POST /api/friends/{userID}/accept", apiHandler.AcceptFriendRequest)
 	mux.HandleFunc("POST /api/friends/{userID}/reject", apiHandler.RejectFriendRequest)
@@ -70,10 +70,10 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/friends/requests", apiHandler.GetPendingFriendRequests)
 	mux.HandleFunc("GET /api/friends/sent", apiHandler.GetSentFriendRequests)
 
-	// Feed endpoint
+	// feed:
 	mux.HandleFunc("GET /api/feed", apiHandler.GetFeed)
 
-	//webhook:
+	// membership:
 	mux.HandleFunc("POST /api/polka/webhooks", apiHandler.UpdateUserMembership)
 
 	//admin:
