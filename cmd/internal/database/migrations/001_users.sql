@@ -8,7 +8,3 @@ CREATE TABLE users (
 
 -- +goose Down
 DROP TABLE users;
-
-
--- up migration: goose postgres "postgres://postgres:chirpDB@localhost:5431/chirpy" up
--- down migration: goose postgres "postgres://postgres:chirpDB@localhost:5431/chirpy" down

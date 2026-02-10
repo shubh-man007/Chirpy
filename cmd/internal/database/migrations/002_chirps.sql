@@ -12,5 +12,3 @@ CREATE INDEX idx_chirps_created_at ON chirps(created_at DESC);
 
 -- +goose Down
 DROP TABLE chirps;
-
--- up migration: goose -dir cmd/internal/database/migrations postgres "postgres://postgres:chirpDB@localhost:5431/chirpy?sslmode=disable" up
