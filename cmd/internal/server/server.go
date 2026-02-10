@@ -62,16 +62,16 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiHandler.DeleteChirp)
 
 	// friends:
-	mux.HandleFunc("POST /api/friends/request", apiHandler.SendFriendRequest)
-	mux.HandleFunc("POST /api/friends/{userID}/accept", apiHandler.AcceptFriendRequest)
-	mux.HandleFunc("POST /api/friends/{userID}/reject", apiHandler.RejectFriendRequest)
-	mux.HandleFunc("DELETE /api/friends/{userID}", apiHandler.RemoveFriend)
-	mux.HandleFunc("GET /api/friends", apiHandler.GetFriends)
-	mux.HandleFunc("GET /api/friends/requests", apiHandler.GetPendingFriendRequests)
-	mux.HandleFunc("GET /api/friends/sent", apiHandler.GetSentFriendRequests)
+	// mux.HandleFunc("POST /api/friends/request", apiHandler.SendFriendRequest)
+	// mux.HandleFunc("POST /api/friends/{userID}/accept", apiHandler.AcceptFriendRequest)
+	// mux.HandleFunc("POST /api/friends/{userID}/reject", apiHandler.RejectFriendRequest)
+	// mux.HandleFunc("DELETE /api/friends/{userID}", apiHandler.RemoveFriend)
+	// mux.HandleFunc("GET /api/friends", apiHandler.GetFriends)
+	// mux.HandleFunc("GET /api/friends/requests", apiHandler.GetPendingFriendRequests)
+	// mux.HandleFunc("GET /api/friends/sent", apiHandler.GetSentFriendRequests)
 
-	// feed:
-	mux.HandleFunc("GET /api/feed", apiHandler.GetFeed)
+	// // feed:
+	// mux.HandleFunc("GET /api/feed", apiHandler.GetFeed)
 
 	// membership:
 	mux.HandleFunc("POST /api/polka/webhooks", apiHandler.UpdateUserMembership)
