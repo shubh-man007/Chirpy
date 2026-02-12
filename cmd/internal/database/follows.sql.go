@@ -87,19 +87,14 @@ func (q *Queries) GetFeed(ctx context.Context, arg GetFeedParams) ([]GetFeedRow,
 	return items, nil
 }
 
-const getFollowerCount = `-- name: GetFollowerCount :one
-SELECT COUNT(*) FROM follows WHERE followee_id = $1
-`
-
-func (q *Queries) GetFollowerCount(ctx context.Context, followeeID uuid.UUID) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getFollowerCount, followeeID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const getFollowers = `-- name: GetFollowers :many
-SELECT u.id, u.email, u.is_chirpy_red, u.created_at, f.created_at as followed_at
+SELECT 
+    u.id, 
+    u.email, 
+    u.is_chirpy_red, 
+    u.created_at, 
+    f.created_at as followed_at,
+    COUNT(*) OVER() as total_followers
 FROM follows f
 INNER JOIN users u ON f.follower_id = u.id
 WHERE f.followee_id = $1
@@ -107,11 +102,12 @@ ORDER BY f.created_at DESC
 `
 
 type GetFollowersRow struct {
-	ID          uuid.UUID `json:"id"`
-	Email       string    `json:"email"`
-	IsChirpyRed bool      `json:"is_chirpy_red"`
-	CreatedAt   time.Time `json:"created_at"`
-	FollowedAt  time.Time `json:"followed_at"`
+	ID             uuid.UUID `json:"id"`
+	Email          string    `json:"email"`
+	IsChirpyRed    bool      `json:"is_chirpy_red"`
+	CreatedAt      time.Time `json:"created_at"`
+	FollowedAt     time.Time `json:"followed_at"`
+	TotalFollowers int64     `json:"total_followers"`
 }
 
 func (q *Queries) GetFollowers(ctx context.Context, followeeID uuid.UUID) ([]GetFollowersRow, error) {
@@ -129,6 +125,7 @@ func (q *Queries) GetFollowers(ctx context.Context, followeeID uuid.UUID) ([]Get
 			&i.IsChirpyRed,
 			&i.CreatedAt,
 			&i.FollowedAt,
+			&i.TotalFollowers,
 		); err != nil {
 			return nil, err
 		}
@@ -144,7 +141,13 @@ func (q *Queries) GetFollowers(ctx context.Context, followeeID uuid.UUID) ([]Get
 }
 
 const getFollowing = `-- name: GetFollowing :many
-SELECT u.id, u.email, u.is_chirpy_red, u.created_at, f.created_at as followed_at
+SELECT 
+    u.id, 
+    u.email, 
+    u.is_chirpy_red, 
+    u.created_at, 
+    f.created_at as followed_at,
+    COUNT(*) OVER() as total_following
 FROM follows f
 INNER JOIN users u ON f.followee_id = u.id
 WHERE f.follower_id = $1
@@ -152,11 +155,12 @@ ORDER BY f.created_at DESC
 `
 
 type GetFollowingRow struct {
-	ID          uuid.UUID `json:"id"`
-	Email       string    `json:"email"`
-	IsChirpyRed bool      `json:"is_chirpy_red"`
-	CreatedAt   time.Time `json:"created_at"`
-	FollowedAt  time.Time `json:"followed_at"`
+	ID             uuid.UUID `json:"id"`
+	Email          string    `json:"email"`
+	IsChirpyRed    bool      `json:"is_chirpy_red"`
+	CreatedAt      time.Time `json:"created_at"`
+	FollowedAt     time.Time `json:"followed_at"`
+	TotalFollowing int64     `json:"total_following"`
 }
 
 func (q *Queries) GetFollowing(ctx context.Context, followerID uuid.UUID) ([]GetFollowingRow, error) {
@@ -174,6 +178,7 @@ func (q *Queries) GetFollowing(ctx context.Context, followerID uuid.UUID) ([]Get
 			&i.IsChirpyRed,
 			&i.CreatedAt,
 			&i.FollowedAt,
+			&i.TotalFollowing,
 		); err != nil {
 			return nil, err
 		}
@@ -186,17 +191,6 @@ func (q *Queries) GetFollowing(ctx context.Context, followerID uuid.UUID) ([]Get
 		return nil, err
 	}
 	return items, nil
-}
-
-const getFollowingCount = `-- name: GetFollowingCount :one
-SELECT COUNT(*) FROM follows WHERE follower_id = $1
-`
-
-func (q *Queries) GetFollowingCount(ctx context.Context, followerID uuid.UUID) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getFollowingCount, followerID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
 }
 
 const isFollowing = `-- name: IsFollowing :one
