@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-
-	"github.com/shubh-man007/Chirpy/cmd/internal/config"
 )
 
 const metricBody = `
@@ -54,14 +52,6 @@ const resetBody = `
 </body>
 </html>
 `
-
-type AdminHandler struct {
-	apiCfg *config.ApiConfig
-}
-
-func NewAdminHandler(cfg *config.ApiConfig) *AdminHandler {
-	return &AdminHandler{apiCfg: cfg}
-}
 
 func (h *AdminHandler) Metrics(w http.ResponseWriter, r *http.Request) {
 	hits := h.apiCfg.FileserverHits.Load()
