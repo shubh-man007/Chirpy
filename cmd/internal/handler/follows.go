@@ -42,6 +42,13 @@ func (h *APIHandler) FollowUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if followerID == followeeID {
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Cannot follow self",
+		})
+		return
+	}
+
 	err = h.cfg.DB.FollowUser(r.Context(), database.FollowUserParams{
 		FollowerID: followerID,
 		FolloweeID: followeeID,
@@ -72,6 +79,13 @@ func (h *APIHandler) UnfollowUser(w http.ResponseWriter, r *http.Request) {
 	followeeID, err := uuid.Parse(followeeIDStr)
 	if err != nil {
 		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid user ID format"})
+		return
+	}
+
+	if followerID == followeeID {
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Cannot unfollow self",
+		})
 		return
 	}
 
