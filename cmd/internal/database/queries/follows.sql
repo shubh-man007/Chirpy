@@ -8,14 +8,26 @@ DELETE FROM follows
 WHERE follower_id = $1 AND followee_id = $2;
 
 -- name: GetFollowers :many
-SELECT u.id, u.email, u.is_chirpy_red, u.created_at, f.created_at as followed_at
+SELECT 
+    u.id, 
+    u.email, 
+    u.is_chirpy_red, 
+    u.created_at, 
+    f.created_at as followed_at,
+    COUNT(*) OVER() as total_followers
 FROM follows f
 INNER JOIN users u ON f.follower_id = u.id
 WHERE f.followee_id = $1
 ORDER BY f.created_at DESC;
 
 -- name: GetFollowing :many
-SELECT u.id, u.email, u.is_chirpy_red, u.created_at, f.created_at as followed_at
+SELECT 
+    u.id, 
+    u.email, 
+    u.is_chirpy_red, 
+    u.created_at, 
+    f.created_at as followed_at,
+    COUNT(*) OVER() as total_following
 FROM follows f
 INNER JOIN users u ON f.followee_id = u.id
 WHERE f.follower_id = $1
@@ -26,12 +38,6 @@ SELECT EXISTS(
     SELECT 1 FROM follows
     WHERE follower_id = $1 AND followee_id = $2
 ) as is_following;
-
--- name: GetFollowerCount :one
-SELECT COUNT(*) FROM follows WHERE followee_id = $1;
-
--- name: GetFollowingCount :one
-SELECT COUNT(*) FROM follows WHERE follower_id = $1;
 
 -- name: GetFeed :many
 SELECT c.id, c.created_at, c.updated_at, c.body, c.user_id, u.email as author_email
