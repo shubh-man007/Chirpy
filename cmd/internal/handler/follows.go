@@ -123,7 +123,7 @@ func (h *APIHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var followerCount int64
-	if followers[0].TotalFollowers > 0 {
+	if len(followers) > 0 {
 		followerCount = followers[0].TotalFollowers
 	}
 
@@ -159,7 +159,7 @@ func (h *APIHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var followingCount int64
-	if following[0].TotalFollowing > 0 {
+	if len(following) > 0 {
 		followingCount = following[0].TotalFollowing
 	}
 
