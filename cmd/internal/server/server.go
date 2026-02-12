@@ -70,8 +70,14 @@ func (s *Server) Routes() http.Handler {
 	// mux.HandleFunc("GET /api/friends/requests", apiHandler.GetPendingFriendRequests)
 	// mux.HandleFunc("GET /api/friends/sent", apiHandler.GetSentFriendRequests)
 
-	// // feed:
-	// mux.HandleFunc("GET /api/feed", apiHandler.GetFeed)
+	// follows:
+	mux.HandleFunc("POST /api/follow", apiHandler.FollowUser)
+	mux.HandleFunc("DELETE /api/follow/{userID}", apiHandler.UnfollowUser)
+	mux.HandleFunc("GET /api/followers", apiHandler.GetFollowers)
+	mux.HandleFunc("GET /api/following", apiHandler.GetFollowing)
+
+	// feed:
+	mux.HandleFunc("GET /api/feed", apiHandler.GetFeed)
 
 	// membership:
 	mux.HandleFunc("POST /api/polka/webhooks", apiHandler.UpdateUserMembership)
