@@ -1,0 +1,191 @@
+// DB Model:
+// Follower: The user who follows; Followee: The user who is followed
+
+package handler
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+
+	"github.com/google/uuid"
+	"github.com/shubh-man007/Chirpy/cmd/internal/auth"
+	"github.com/shubh-man007/Chirpy/cmd/internal/database"
+)
+
+func (h *APIHandler) FollowUser(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	followerID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	var req struct {
+		FolloweeID string `json:"followee_id"`
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid Request"})
+		return
+	}
+
+	followeeID, err := uuid.Parse(req.FolloweeID)
+	if err != nil {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid user ID format"})
+		return
+	}
+
+	err = h.cfg.DB.FollowUser(r.Context(), database.FollowUserParams{
+		FollowerID: followerID,
+		FolloweeID: followeeID,
+	})
+	if err != nil {
+		log.Printf("Error following user: %v", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to follow user"})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *APIHandler) UnfollowUser(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	followerID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	followeeIDStr := r.PathValue("userID")
+	followeeID, err := uuid.Parse(followeeIDStr)
+	if err != nil {
+		errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid user ID format"})
+		return
+	}
+
+	err = h.cfg.DB.UnfollowUser(r.Context(), database.UnfollowUserParams{
+		FollowerID: followerID,
+		FolloweeID: followeeID,
+	})
+	if err != nil {
+		log.Printf("Error unfollowing user: %v", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to unfollow user"})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *APIHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	followers, err := h.cfg.DB.GetFollowers(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error fetching followers: %v", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to fetch followers"})
+		return
+	}
+
+	var followerCount int64
+	if followers[0].TotalFollowers > 0 {
+		followerCount = followers[0].TotalFollowers
+	}
+
+	type FollowerInfo struct {
+		Followers     []database.GetFollowersRow
+		FollowerCount int64
+	}
+
+	respondJSON(w, http.StatusOK, FollowerInfo{
+		Followers:     followers,
+		FollowerCount: followerCount,
+	})
+}
+
+func (h *APIHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	following, err := h.cfg.DB.GetFollowing(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error fetching following users: %v", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to fetch following users"})
+		return
+	}
+
+	var followingCount int64
+	if following[0].TotalFollowing > 0 {
+		followingCount = following[0].TotalFollowing
+	}
+
+	type FollowingInfo struct {
+		Following      []database.GetFollowingRow
+		FollowingCount int64
+	}
+
+	respondJSON(w, http.StatusOK, FollowingInfo{
+		Following:      following,
+		FollowingCount: followingCount,
+	})
+}
+
+func (h *APIHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, h.cfg.JWTSecret)
+	if err != nil {
+		errJSON(w, http.StatusUnauthorized, ErrMessage{Message: "Unauthorized"})
+		return
+	}
+
+	limit := int32(20)
+	offset := int32(0)
+
+	chirps, err := h.cfg.DB.GetFeed(r.Context(), database.GetFeedParams{
+		FollowerID: userID,
+		Limit:      limit,
+		Offset:     offset,
+	})
+	if err != nil {
+		log.Printf("Error fetching feed: %v", err)
+		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to fetch feed"})
+		return
+	}
+
+	respondJSON(w, http.StatusOK, chirps)
+}
