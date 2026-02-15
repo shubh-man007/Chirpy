@@ -139,7 +139,7 @@ func (c *Chirpy) DeleteUser(userID string) error {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Bearer"+c.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 
 	res, err := c.Client.Do(req)
 	if err != nil {
@@ -167,7 +167,7 @@ func (c *Chirpy) CreateChirp(body string) (*models.Chirp, error) {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer"+c.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 
 	res, err := c.Client.Do(req)
 	if err != nil {
@@ -201,7 +201,7 @@ func (c *Chirpy) UpdateChirp(chirpID, body string) (*models.Chirp, error) {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer"+c.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 
 	res, err := c.Client.Do(req)
 	if err != nil {
@@ -231,7 +231,7 @@ func (c *Chirpy) DeleteChirp(chirpID string) error {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Bearer"+c.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 
 	res, err := c.Client.Do(req)
 	if err != nil {
@@ -246,4 +246,239 @@ func (c *Chirpy) DeleteChirp(chirpID string) error {
 	}
 
 	return nil
+}
+
+// sort = {asc, desc}
+func (c *Chirpy) GetMyChirps(sort string) ([]models.Chirp, error) {
+	var URL string
+	switch sort {
+	case "desc":
+		URL = c.BaseURL + "/api/me/chirps?sort=desc"
+	default:
+		URL = c.BaseURL + "/api/me/chirps"
+	}
+	req, err := http.NewRequest("GET", URL, nil)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		log.Printf("Error getting response: %v", err)
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	chirps := []models.Chirp{}
+	err = json.NewDecoder(res.Body).Decode(&chirps)
+	if err != nil {
+		log.Printf("Something went wrong: %v", err)
+		return nil, err
+	}
+
+	return chirps, nil
+}
+
+func (c *Chirpy) GetChirpsByUser(userID, sort string) ([]models.Chirp, error) {
+	var URL string
+	switch sort {
+	case "desc":
+		URL = c.BaseURL + "/api/users/" + userID + "chirps?sort=desc"
+	default:
+		URL = c.BaseURL + "/api/users/" + userID + "chirps"
+	}
+	req, err := http.NewRequest("GET", URL, nil)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		log.Printf("Error getting response: %v", err)
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	chirps := []models.Chirp{}
+	err = json.NewDecoder(res.Body).Decode(&chirps)
+	if err != nil {
+		log.Printf("Something went wrong: %v", err)
+		return nil, err
+	}
+
+	return chirps, nil
+}
+
+// limit = 20 ; offset = 0
+func (c *Chirpy) GetFeed(limit, offset string) ([]models.Chirp, error) {
+	var URL string
+	if limit != "" && offset != "" {
+		URL = c.BaseURL + "/api/feed?" + "limit=" + limit + "&offset=" + offset
+	} else {
+		switch limit {
+		case "":
+			URL = c.BaseURL + "/api/feed?" + "offset=" + offset
+		default:
+			URL = c.BaseURL + "/api/feed?" + "limit=" + limit
+		}
+	}
+
+	req, err := http.NewRequest("GET", URL, nil)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		log.Printf("Error getting response: %v", err)
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	chirps := []models.Chirp{}
+	err = json.NewDecoder(res.Body).Decode(&chirps)
+	if err != nil {
+		log.Printf("Something went wrong: %v", err)
+		return nil, err
+	}
+
+	return chirps, nil
+}
+
+func (c *Chirpy) FollowUser(userID string) error {
+	followee := models.Follow{FolloweeID: userID}
+
+	followeeJSON, _ := json.Marshal(followee)
+
+	req, err := http.NewRequest("POST", c.BaseURL+"/api/follow", bytes.NewBuffer(followeeJSON))
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		log.Printf("Error getting response: %v", err)
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+func (c *Chirpy) UnfollowUser(userID string) error {
+	req, err := http.NewRequest("DELETE", c.BaseURL+"/api/follow/"+userID, nil)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		log.Printf("Error getting response: %v", err)
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+func (c *Chirpy) GetFollowers() (*models.FollowResponse, error) {
+	req, err := http.NewRequest("GET", c.BaseURL+"/api/followers", nil)
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	var response models.FollowResponse
+	err = json.NewDecoder(res.Body).Decode(&response)
+	if err != nil {
+		log.Printf("Error decoding followers response: %v", err)
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+func (c *Chirpy) GetFollowing() (*models.FollowResponse, error) {
+	req, err := http.NewRequest("GET", c.BaseURL+"/api/following", nil)
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	var response models.FollowResponse
+	err = json.NewDecoder(res.Body).Decode(&response)
+	if err != nil {
+		log.Printf("Error decoding following response: %v", err)
+		return nil, err
+	}
+
+	return &response, nil
 }
