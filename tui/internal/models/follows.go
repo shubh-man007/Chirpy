@@ -2,10 +2,9 @@ package models
 
 import "time"
 
-type FeedChirp struct {
-	Chirps []Chirp `json:"feed,omitempty"`
+type Follow struct {
+	FolloweeID string `json:"followee_id"`
 }
-
 type FollowResponse struct {
 	Followers []FollowUser `json:"followers,omitempty"`
 	Following []FollowUser `json:"following,omitempty"`
