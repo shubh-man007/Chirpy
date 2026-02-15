@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/shubh-man007/Chirpy/tui/internal/models"
 )
@@ -326,22 +328,26 @@ func (c *Chirpy) GetChirpsByUser(userID, sort string) ([]models.Chirp, error) {
 }
 
 // limit = 20 ; offset = 0
-func (c *Chirpy) GetFeed(limit, offset string) ([]models.Chirp, error) {
-	var URL string
-	if limit != "" && offset != "" {
-		URL = c.BaseURL + "/api/feed?" + "limit=" + limit + "&offset=" + offset
-	} else {
-		switch limit {
-		case "":
-			URL = c.BaseURL + "/api/feed?" + "offset=" + offset
-		default:
-			URL = c.BaseURL + "/api/feed?" + "limit=" + limit
-		}
+func (c *Chirpy) GetFeed(limit, offset int) ([]models.Chirp, error) {
+	u, err := url.Parse(c.BaseURL + "/api/feed")
+	if err != nil {
+		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", URL, nil)
+	q := u.Query()
+
+	if limit > 0 {
+		q.Set("limit", strconv.Itoa(limit))
+	}
+
+	if offset > 0 {
+		q.Set("offset", strconv.Itoa(offset))
+	}
+
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
-		log.Printf("Error sending request: %v", err)
 		return nil, err
 	}
 
@@ -349,7 +355,6 @@ func (c *Chirpy) GetFeed(limit, offset string) ([]models.Chirp, error) {
 
 	res, err := c.Client.Do(req)
 	if err != nil {
-		log.Printf("Error getting response: %v", err)
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -359,10 +364,9 @@ func (c *Chirpy) GetFeed(limit, offset string) ([]models.Chirp, error) {
 		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
 	}
 
-	chirps := []models.Chirp{}
+	var chirps []models.Chirp
 	err = json.NewDecoder(res.Body).Decode(&chirps)
 	if err != nil {
-		log.Printf("Something went wrong: %v", err)
 		return nil, err
 	}
 
