@@ -2,6 +2,10 @@ package models
 
 import "time"
 
+type ChirpBody struct {
+	Body string `json:"body"`
+}
+
 type Chirp struct {
 	ID        string    `json:"id"`
 	Body      string    `json:"body"`
