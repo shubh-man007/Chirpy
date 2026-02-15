@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/shubh-man007/Chirpy/cmd/internal/auth"
@@ -187,8 +188,25 @@ func (h *APIHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limit := int32(20)
-	offset := int32(0)
+	query := r.URL.Query()
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
+
+	var limit int32
+	if limitStr == "" {
+		limit = 20
+	} else {
+		val, _ := strconv.Atoi(limitStr)
+		limit = int32(val)
+	}
+
+	var offset int32
+	if offsetStr == "" {
+		offset = 20
+	} else {
+		val, _ := strconv.Atoi(offsetStr)
+		offset = int32(val)
+	}
 
 	chirps, err := h.cfg.DB.GetFeed(r.Context(), database.GetFeedParams{
 		FollowerID: userID,
