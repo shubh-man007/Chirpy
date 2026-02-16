@@ -189,22 +189,26 @@ func (h *APIHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := r.URL.Query()
-	limitStr := query.Get("limit")
-	offsetStr := query.Get("offset")
 
-	var limit int32
-	if limitStr == "" {
-		limit = 20
-	} else {
-		val, _ := strconv.Atoi(limitStr)
+	var limit int32 = 20
+	limitStr := query.Get("limit")
+	if limitStr != "" {
+		val, err := strconv.Atoi(limitStr)
+		if err != nil || val < 0 {
+			errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid limit"})
+			return
+		}
 		limit = int32(val)
 	}
 
-	var offset int32
-	if offsetStr == "" {
-		offset = 20
-	} else {
-		val, _ := strconv.Atoi(offsetStr)
+	var offset int32 = 0
+	offsetStr := query.Get("offset")
+	if offsetStr != "" {
+		val, err := strconv.Atoi(offsetStr)
+		if err != nil || val < 0 {
+			errJSON(w, http.StatusBadRequest, ErrMessage{Message: "Invalid offset"})
+			return
+		}
 		offset = int32(val)
 	}
 
@@ -217,6 +221,10 @@ func (h *APIHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error fetching feed: %v", err)
 		errJSON(w, http.StatusInternalServerError, ErrMessage{Message: "Failed to fetch feed"})
 		return
+	}
+
+	if chirps == nil {
+		chirps = []database.GetFeedRow{}
 	}
 
 	respondJSON(w, http.StatusOK, chirps)
