@@ -2,11 +2,12 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/truncate"
 	"github.com/muesli/reflow/wordwrap"
@@ -15,7 +16,6 @@ import (
 	"github.com/shubh-man007/Chirpy/tui/internal/models"
 )
 
-// FeedModel renders the authenticated user's feed.
 type FeedModel struct {
 	client *api.Chirpy
 
@@ -54,9 +54,14 @@ func NewFeedModel(client *api.Chirpy) FeedModel {
 	}
 }
 
-// InitFeed returns the initial command to load the first page.
-func (m FeedModel) InitFeed() tea.Cmd {
+func (m *FeedModel) InitFeed() tea.Cmd {
 	m.loading = true
+	m.errorMsg = ""
+	m.chirps = nil
+	m.cursor = 0
+	m.offset = 0
+	m.hasMore = true
+
 	return tea.Batch(
 		m.spin.Tick,
 		fetchFeedCmd(m.client, m.limit, m.offset, false),
@@ -129,7 +134,6 @@ func (m FeedModel) Update(msg tea.Msg) (FeedModel, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
-	// Infinite scroll: if we've scrolled to bottom and there is more, fetch next page.
 	if m.viewport.AtBottom() && !m.loading && m.hasMore {
 		m.loading = true
 		m.offset += m.limit
@@ -176,7 +180,6 @@ func (m *FeedModel) buildViewportContent() {
 		lines = append(lines, loadingLine)
 	} else {
 		if len(m.chirps) == 0 {
-			// Empty state: no chirps available in the feed.
 			empty := lipgloss.NewStyle().
 				Foreground(colorMuted).
 				Render("Your feed is empty.\n\n" +
@@ -228,7 +231,15 @@ func (m FeedModel) View() string {
 	}
 
 	header := headerStyle.Width(m.width).Render(" Chirpy | Feed ")
-	footer := footerStyle.Width(m.width).Render("[↑/k ↓/j] Navigate  [r] Refresh  [q] Quit")
+
+	now := time.Now().Format("2006-01-02 15:04")
+	left := "[↑/k ↓/j] Navigate  [r] Refresh  [q] Quit"
+	space := ""
+	totalWidth := lipgloss.Width(left + now)
+	if m.width > totalWidth {
+		space = strings.Repeat(" ", m.width-totalWidth)
+	}
+	footer := footerStyle.Width(m.width).Render(left + space + now)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -267,4 +278,3 @@ func relativeTime(t time.Time) string {
 		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
 	}
 }
-
