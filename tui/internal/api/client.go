@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -293,9 +294,9 @@ func (c *Chirpy) GetChirpsByUser(userID, sort string) ([]models.Chirp, error) {
 	var URL string
 	switch sort {
 	case "desc":
-		URL = c.BaseURL + "/api/users/" + userID + "chirps?sort=desc"
+		URL = c.BaseURL + "/api/users/" + userID + "/chirps?sort=desc"
 	default:
-		URL = c.BaseURL + "/api/users/" + userID + "chirps"
+		URL = c.BaseURL + "/api/users/" + userID + "/chirps"
 	}
 	req, err := http.NewRequest("GET", URL, nil)
 	if err != nil {
@@ -365,8 +366,11 @@ func (c *Chirpy) GetFeed(limit, offset int) ([]models.Chirp, error) {
 	}
 
 	var chirps []models.Chirp
-	err = json.NewDecoder(res.Body).Decode(&chirps)
-	if err != nil {
+	dec := json.NewDecoder(res.Body)
+	if err := dec.Decode(&chirps); err != nil {
+		if errors.Is(err, io.EOF) {
+			return []models.Chirp{}, nil
+		}
 		return nil, err
 	}
 
