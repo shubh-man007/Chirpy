@@ -22,3 +22,17 @@ type FeedLoadedMsg struct {
 type ChirpPostedMsg struct {
 	Chirp *models.Chirp
 }
+
+type UserUpdatedMsg struct {
+	User *models.User
+	Err  error
+}
+
+type UserDeletedMsg struct {
+	Err error
+}
+
+type UserChirpsLoadedMsg struct {
+	Chirps []models.Chirp
+	Err    error
+}

@@ -3,6 +3,7 @@ package ui
 import (
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/charmbracelet/bubbles/textarea"
@@ -148,7 +149,14 @@ func (m ComposeModel) View() string {
 		lipgloss.JoinVertical(lipgloss.Left, bodyLines...),
 	)
 
-	footer := footerStyle.Width(m.width).Render("[Ctrl+S] Post  [Esc] Back  [q] Quit")
+	now := time.Now().Format("2006-01-02 15:04")
+	left := "[Ctrl+S] Post  [Esc] Back  [q] Quit"
+	space := ""
+	totalWidth := lipgloss.Width(left + now)
+	if m.width > totalWidth {
+		space = strings.Repeat(" ", m.width-totalWidth)
+	}
+	footer := footerStyle.Width(m.width).Render(left + space + now)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
