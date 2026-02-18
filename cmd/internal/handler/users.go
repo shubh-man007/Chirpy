@@ -266,3 +266,52 @@ func (h *APIHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (h *APIHandler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
+	accessToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Printf("Access token absent: %v", err)
+		errJSON(w, http.StatusUnauthorized, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	userID, err := auth.ValidateJWT(accessToken, h.cfg.JWTSecret)
+	if err != nil {
+		log.Printf("Invalid access token: %v", err)
+		errJSON(w, http.StatusUnauthorized, ErrMessage{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	user, err := h.cfg.DB.GetUserByID(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error fetching user: %v", err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, user)
+}
+
+func (h *APIHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(r.PathValue("userID"))
+	if err != nil {
+		log.Printf("Could not parse user ID: %v", err)
+		errJSON(w, http.StatusBadRequest, ErrMessage{
+			Message: "Something went wrong",
+		})
+		return
+	}
+
+	user, err := h.cfg.DB.GetUserByID(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error fetching user: %v", err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, user)
+}
