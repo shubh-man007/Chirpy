@@ -15,6 +15,7 @@ import (
 )
 
 type Chirpy struct {
+	ID           string
 	BaseURL      string
 	Client       *http.Client
 	AccessToken  string
@@ -98,6 +99,28 @@ func (c *Chirpy) Register(email, password string) (*models.User, error) {
 	}
 
 	return &userRes, nil
+}
+
+func (c *Chirpy) GetMyProfile() (*models.User, error) {
+	req, err := http.NewRequest("GET", c.BaseURL+"/api/users", nil)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return nil, err
+	}
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		log.Printf("Error getting response: %v", err)
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	return nil, nil
 }
 
 func (c *Chirpy) UpdateUserCredentials(email, password string) (*models.User, error) {
@@ -366,8 +389,8 @@ func (c *Chirpy) GetFeed(limit, offset int) ([]models.Chirp, error) {
 	}
 
 	var chirps []models.Chirp
-	dec := json.NewDecoder(res.Body)
-	if err := dec.Decode(&chirps); err != nil {
+	err = json.NewDecoder(res.Body).Decode(&chirps)
+	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return []models.Chirp{}, nil
 		}
