@@ -45,8 +45,8 @@ func (s *Server) Routes() http.Handler {
 	//users:
 	mux.HandleFunc("POST /api/login", apiHandler.LoginUser)
 	mux.HandleFunc("POST /api/users", apiHandler.CreateUser)
-	mux.HandleFunc("GET /api/users", apiHandler.GetMyProfile)
-	mux.HandleFunc("GET /api/users/{userID}", apiHandler.GetUserByID)
+	mux.HandleFunc("GET /api/me/profile", apiHandler.GetMyProfile)
+	mux.HandleFunc("GET /api/users/{userID}/profile", apiHandler.GetProfileByUserID)
 	mux.HandleFunc("PUT /api/users", apiHandler.UpdateUserCred)
 	mux.HandleFunc("DELETE /api/users/{userID}", apiHandler.DeleteUser)
 
@@ -56,10 +56,6 @@ func (s *Server) Routes() http.Handler {
 
 	//chirps:
 	mux.HandleFunc("POST /api/chirps", apiHandler.CreateChirp)
-	mux.HandleFunc("GET /api/chirps", apiHandler.GetAllChirps)
-	mux.HandleFunc("GET /api/me/chirps", apiHandler.GetMyChirps)
-	mux.HandleFunc("GET /api/users/{userID}/chirps", apiHandler.GetChirpsByUser)
-	mux.HandleFunc("GET /api/chirps/{chirpID}", apiHandler.GetChirpByChirpID)
 	mux.HandleFunc("PATCH /api/chirps/{chirpID}", apiHandler.UpdateChirp)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiHandler.DeleteChirp)
 
