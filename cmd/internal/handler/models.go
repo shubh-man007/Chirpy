@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/shubh-man007/Chirpy/cmd/internal/config"
 )
 
@@ -29,6 +30,26 @@ func NewAPIHandler(cfg *config.ApiConfig) *APIHandler {
 type UserLogin struct {
 	Password string `json:"password"`
 	Email    string `json:"email"`
+}
+
+type ProfileResponse struct {
+	ID             uuid.UUID   `json:"id"`
+	Email          string      `json:"email"`
+	CreatedAt      string      `json:"created_at"`
+	UpdatedAt      string      `json:"updated_at"`
+	IsChirpyRed    bool        `json:"is_chirpy_red"`
+	FollowersCount int64       `json:"followers_count"`
+	FollowingCount int64       `json:"following_count"`
+	ChirpsCount    int64       `json:"chirps_count"`
+	Chirps         []ChirpItem `json:"chirps"`
+	NextCursor     *string     `json:"next_cursor,omitempty"`
+	IsFollowing    *bool       `json:"is_following,omitempty"`
+}
+
+type ChirpItem struct {
+	ID        uuid.UUID `json:"id"`
+	Body      string    `json:"body"`
+	CreatedAt string    `json:"created_at"`
 }
 
 type ChirpBody struct {
