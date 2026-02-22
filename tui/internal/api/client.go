@@ -101,11 +101,67 @@ func (c *Chirpy) Register(email, password string) (*models.User, error) {
 	return &userRes, nil
 }
 
-func (c *Chirpy) GetMyProfile() (*models.User, error) {
-	req, err := http.NewRequest("GET", c.BaseURL+"/api/users", nil)
+func (c *Chirpy) GetMyProfile(cursor string, limit int) (*models.ProfileResponse, error) {
+	u, err := url.Parse(c.BaseURL + "/api/me/profile")
+	if err != nil {
+		return nil, err
+	}
+	q := u.Query()
+	if cursor != "" {
+		q.Set("cursor", cursor)
+	}
+	if limit > 0 {
+		q.Set("limit", strconv.Itoa(limit))
+	}
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		log.Printf("Error sending request: %v", err)
 		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		log.Printf("Error getting response: %v", err)
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	var profile models.ProfileResponse
+	if err := json.NewDecoder(res.Body).Decode(&profile); err != nil {
+		return nil, err
+	}
+	return &profile, nil
+}
+
+func (c *Chirpy) GetProfile(userID, cursor string, limit int) (*models.ProfileResponse, error) {
+	u, err := url.Parse(c.BaseURL + "/api/users/" + userID + "/profile")
+	if err != nil {
+		return nil, err
+	}
+	q := u.Query()
+	if cursor != "" {
+		q.Set("cursor", cursor)
+	}
+	if limit > 0 {
+		q.Set("limit", strconv.Itoa(limit))
+	}
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return nil, err
+	}
+	if c.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	}
 
 	res, err := c.Client.Do(req)
@@ -120,7 +176,59 @@ func (c *Chirpy) GetMyProfile() (*models.User, error) {
 		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
 	}
 
-	return nil, nil
+	var profile models.ProfileResponse
+	if err := json.NewDecoder(res.Body).Decode(&profile); err != nil {
+		return nil, err
+	}
+	return &profile, nil
+}
+
+func (c *Chirpy) GetFollowersByUserID(userID string) (*models.FollowersResponse, error) {
+	req, err := http.NewRequest("GET", c.BaseURL+"/api/users/"+userID+"/followers", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	var resp models.FollowersResponse
+	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *Chirpy) GetFollowingByUserID(userID string) (*models.FollowingResponse, error) {
+	req, err := http.NewRequest("GET", c.BaseURL+"/api/users/"+userID+"/following", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
+	}
+
+	var resp models.FollowingResponse
+	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
 func (c *Chirpy) UpdateUserCredentials(email, password string) (*models.User, error) {
@@ -136,6 +244,7 @@ func (c *Chirpy) UpdateUserCredentials(email, password string) (*models.User, er
 		log.Printf("Error sending request: %v", err)
 		return nil, err
 	}
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 
 	res, err := c.Client.Do(req)
 	if err != nil {
@@ -452,7 +561,8 @@ func (c *Chirpy) UnfollowUser(userID string) error {
 	return nil
 }
 
-func (c *Chirpy) GetFollowers() (*models.FollowResponse, error) {
+// GetFollowers fetches the authenticated user's followers (GET /api/followers).
+func (c *Chirpy) GetFollowers() (*models.FollowersResponse, error) {
 	req, err := http.NewRequest("GET", c.BaseURL+"/api/followers", nil)
 	if err != nil {
 		log.Printf("Error creating request: %v", err)
@@ -473,7 +583,7 @@ func (c *Chirpy) GetFollowers() (*models.FollowResponse, error) {
 		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
 	}
 
-	var response models.FollowResponse
+	var response models.FollowersResponse
 	err = json.NewDecoder(res.Body).Decode(&response)
 	if err != nil {
 		log.Printf("Error decoding followers response: %v", err)
@@ -483,7 +593,8 @@ func (c *Chirpy) GetFollowers() (*models.FollowResponse, error) {
 	return &response, nil
 }
 
-func (c *Chirpy) GetFollowing() (*models.FollowResponse, error) {
+// GetFollowing fetches the authenticated user's following list (GET /api/following).
+func (c *Chirpy) GetFollowing() (*models.FollowingResponse, error) {
 	req, err := http.NewRequest("GET", c.BaseURL+"/api/following", nil)
 	if err != nil {
 		log.Printf("Error creating request: %v", err)
@@ -504,7 +615,7 @@ func (c *Chirpy) GetFollowing() (*models.FollowResponse, error) {
 		return nil, fmt.Errorf("API error %d: %s", res.StatusCode, string(body))
 	}
 
-	var response models.FollowResponse
+	var response models.FollowingResponse
 	err = json.NewDecoder(res.Body).Decode(&response)
 	if err != nil {
 		log.Printf("Error decoding following response: %v", err)
