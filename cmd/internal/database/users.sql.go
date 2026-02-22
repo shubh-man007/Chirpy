@@ -118,6 +118,60 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow
 	return i, err
 }
 
+const getUserChirpsPaginated = `-- name: GetUserChirpsPaginated :many
+SELECT 
+    c.id,
+    c.created_at,
+    c.updated_at,
+    c.body,
+    c.user_id
+FROM chirps c
+WHERE c.user_id = $1
+AND (
+    $2::uuid IS NULL OR 
+    (c.created_at, c.id) < (
+        SELECT created_at, id FROM chirps WHERE id = $2
+    )
+)
+ORDER BY c.created_at DESC, c.id DESC
+LIMIT $3
+`
+
+type GetUserChirpsPaginatedParams struct {
+	UserID    uuid.UUID     `json:"user_id"`
+	Cursor    uuid.NullUUID `json:"cursor"`
+	PageLimit int32         `json:"page_limit"`
+}
+
+func (q *Queries) GetUserChirpsPaginated(ctx context.Context, arg GetUserChirpsPaginatedParams) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, getUserChirpsPaginated, arg.UserID, arg.Cursor, arg.PageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserPassByEmail = `-- name: GetUserPassByEmail :one
 SELECT hashed_password FROM users WHERE email = $1
 `
@@ -127,6 +181,50 @@ func (q *Queries) GetUserPassByEmail(ctx context.Context, email string) (string,
 	var hashed_password string
 	err := row.Scan(&hashed_password)
 	return hashed_password, err
+}
+
+const getUserProfile = `-- name: GetUserProfile :one
+WITH user_stats AS (
+    SELECT 
+        u.id,
+        u.email,
+        u.created_at,
+        u.updated_at,
+        u.is_chirpy_red,
+        (SELECT COUNT(*) FROM follows WHERE followee_id = u.id) as followers_count,
+        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) as following_count,
+        (SELECT COUNT(*) FROM chirps WHERE user_id = u.id) as chirps_count
+    FROM users u
+    WHERE u.id = $1
+)
+SELECT id, email, created_at, updated_at, is_chirpy_red, followers_count, following_count, chirps_count FROM user_stats
+`
+
+type GetUserProfileRow struct {
+	ID             uuid.UUID `json:"id"`
+	Email          string    `json:"email"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	IsChirpyRed    bool      `json:"is_chirpy_red"`
+	FollowersCount int64     `json:"followers_count"`
+	FollowingCount int64     `json:"following_count"`
+	ChirpsCount    int64     `json:"chirps_count"`
+}
+
+func (q *Queries) GetUserProfile(ctx context.Context, id uuid.UUID) (GetUserProfileRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserProfile, id)
+	var i GetUserProfileRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsChirpyRed,
+		&i.FollowersCount,
+		&i.FollowingCount,
+		&i.ChirpsCount,
+	)
+	return i, err
 }
 
 const updateUserCred = `-- name: UpdateUserCred :one
