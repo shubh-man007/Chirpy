@@ -116,12 +116,24 @@ func (m RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.currentScreen != ScreenLogin {
 			switch msg.String() {
 			case "1":
-				m.currentScreen = ScreenFeed
-				return m, nil
+				// On Profile, "1" switches to Chirps tab - let profile handle it.
+				if m.currentScreen != ScreenProfile {
+					m.currentScreen = ScreenFeed
+					return m, nil
+				}
 			case "2":
-				m.currentScreen = ScreenProfile
-				return m, nil
-			case "3", "b":
+				// On Profile, "2" switches to Followers tab - let profile handle it.
+				if m.currentScreen != ScreenProfile {
+					m.currentScreen = ScreenProfile
+					return m, m.profileModel.InitProfile()
+				}
+			case "3":
+				// On Profile, "3" switches to Following tab - let profile handle it.
+				if m.currentScreen != ScreenProfile {
+					m.currentScreen = ScreenSearch
+					return m, nil
+				}
+			case "b":
 				m.currentScreen = ScreenSearch
 				return m, nil
 			case "4", "t":
@@ -159,6 +171,8 @@ func (m RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.currentScreen = ScreenFeed
 					case "Profile":
 						m.currentScreen = ScreenProfile
+						m.activeArea = focusContent
+						return m, m.profileModel.InitProfile()
 					case "Browse":
 						m.currentScreen = ScreenSearch
 					case "Themes":
@@ -330,4 +344,3 @@ func NewProgram(client *api.Chirpy) *tea.Program {
 		tea.WithAltScreen(), // Use the full terminal screen.
 	)
 }
-

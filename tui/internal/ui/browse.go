@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,22 +16,21 @@ import (
 	"github.com/shubh-man007/Chirpy/tui/internal/models"
 )
 
-// BrowseModel lets the user look up another user's chirps by user ID
-// and follow/unfollow them.
 type BrowseModel struct {
 	client *api.Chirpy
 
 	width  int
 	height int
 
-	input   textinput.Model
+	input    textinput.Model
 	viewport viewport.Model
 
 	currentUserID string
-	chirps        []models.Chirp
+	profile       *models.ProfileResponse
 
 	loading  bool
 	errorMsg string
+	spin     spinner.Model
 }
 
 func NewBrowseModel(client *api.Chirpy) BrowseModel {
@@ -40,11 +40,14 @@ func NewBrowseModel(client *api.Chirpy) BrowseModel {
 	ti.Focus()
 
 	vp := viewport.New(0, 0)
+	s := spinner.New()
+	s.Spinner = spinner.Dot
 
 	return BrowseModel{
 		client:   client,
 		input:    ti,
 		viewport: vp,
+		spin:     s,
 	}
 }
 
@@ -71,7 +74,8 @@ func (m BrowseModel) Update(msg tea.Msg) (BrowseModel, tea.Cmd) {
 			m.currentUserID = userID
 			m.loading = true
 			m.errorMsg = ""
-			return m, fetchUserChirpsCmd(m.client, userID)
+			m.profile = nil
+			return m, tea.Batch(m.spin.Tick, fetchUserProfileCmd(m.client, userID))
 		case "f":
 			if m.currentUserID == "" {
 				return m, nil
@@ -84,14 +88,21 @@ func (m BrowseModel) Update(msg tea.Msg) (BrowseModel, tea.Cmd) {
 			return m, unfollowUserCmd(m.client, m.currentUserID)
 		}
 
-	case UserChirpsLoadedMsg:
+	case FollowUnfollowSuccessMsg:
+		if m.currentUserID != "" {
+			m.loading = true
+			return m, tea.Batch(m.spin.Tick, fetchUserProfileCmd(m.client, m.currentUserID))
+		}
+		return m, nil
+
+	case ProfileLoadedMsg:
 		m.loading = false
 		if msg.Err != nil {
 			m.errorMsg = msg.Err.Error()
-			m.chirps = nil
+			m.profile = nil
 		} else {
 			m.errorMsg = ""
-			m.chirps = msg.Chirps
+			m.profile = msg.Profile
 		}
 		m.buildViewportContent()
 		return m, nil
@@ -106,14 +117,15 @@ func (m BrowseModel) Update(msg tea.Msg) (BrowseModel, tea.Cmd) {
 	}
 
 	var cmds []tea.Cmd
-
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
 	cmds = append(cmds, cmd)
-
 	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
-
+	if m.loading {
+		m.spin, cmd = m.spin.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 	return m, tea.Batch(cmds...)
 }
 
@@ -145,23 +157,49 @@ func (m *BrowseModel) buildViewportContent() {
 	if m.loading {
 		lines = append(lines,
 			lipgloss.NewStyle().Foreground(colorMuted).
-				Render("Loading user chirps..."),
+				Render(m.spin.View()+" Loading profile..."),
 		)
-	} else if len(m.chirps) == 0 {
+	} else if m.profile == nil {
 		lines = append(lines,
 			lipgloss.NewStyle().Foreground(colorMuted).
-				Render("No chirps found for this user."),
+				Render("Enter a user ID and press Enter to view their profile."),
 		)
 	} else {
-		for _, c := range m.chirps {
-			header := fmt.Sprintf("%s · %s", c.UserID, relativeTime(c.CreatedAt))
-			body := wordwrap.String(c.Body, m.viewport.Width-4)
-			content := lipgloss.JoinVertical(
-				lipgloss.Left,
-				authorStyle.Render(header),
-				body,
-			)
-			lines = append(lines, chirpBoxStyle.Width(m.viewport.Width).Render(content))
+		status := "Standard"
+		if m.profile.IsChirpyRed {
+			status = "Chirpy Red"
+		}
+		info := lipgloss.JoinVertical(lipgloss.Left,
+			"Email: "+m.profile.Email,
+			"User ID: "+m.profile.ID,
+			"Status: "+status,
+			fmt.Sprintf("Followers: %d  Following: %d  Chirps: %d",
+				m.profile.FollowersCount, m.profile.FollowingCount, m.profile.ChirpsCount),
+		)
+		if m.profile.IsFollowing != nil {
+			if *m.profile.IsFollowing {
+				info = lipgloss.JoinVertical(lipgloss.Left, info, authorStyle.Render("You follow this user"))
+			} else {
+				info = lipgloss.JoinVertical(lipgloss.Left, info, lipgloss.NewStyle().Foreground(colorMuted).Render("Not following"))
+			}
+		}
+		lines = append(lines, chirpBoxStyle.Width(m.viewport.Width).Render(info))
+		lines = append(lines, "")
+
+		if len(m.profile.Chirps) == 0 {
+			lines = append(lines, lipgloss.NewStyle().Foreground(colorMuted).Render("No chirps yet."))
+		} else {
+			lines = append(lines, lipgloss.NewStyle().Bold(true).Render("Chirps:"))
+			for _, c := range m.profile.Chirps {
+				header := fmt.Sprintf("%s", relativeTime(c.CreatedAt))
+				body := wordwrap.String(c.Body, m.viewport.Width-4)
+				content := lipgloss.JoinVertical(
+					lipgloss.Left,
+					timestampStyle.Render(header),
+					body,
+				)
+				lines = append(lines, chirpBoxStyle.Width(m.viewport.Width).Render(content))
+			}
 		}
 	}
 
@@ -187,9 +225,8 @@ func (m BrowseModel) View() string {
 		lipgloss.JoinVertical(lipgloss.Left, bodyLines...),
 	)
 
-	// Footer with current time at the bottom-right.
 	now := time.Now().Format("2006-01-02 15:04")
-	left := "[Enter] Load chirps  [f] Follow  [u] Unfollow  [q] Quit"
+	left := "[Enter] Load profile  [f] Follow  [u] Unfollow  [q] Quit"
 	space := ""
 	totalWidth := lipgloss.Width(left + now)
 	if m.width > totalWidth {
@@ -205,10 +242,10 @@ func (m BrowseModel) View() string {
 	)
 }
 
-func fetchUserChirpsCmd(client *api.Chirpy, userID string) tea.Cmd {
+func fetchUserProfileCmd(client *api.Chirpy, userID string) tea.Cmd {
 	return func() tea.Msg {
-		chirps, err := client.GetChirpsByUser(userID, "desc")
-		return UserChirpsLoadedMsg{Chirps: chirps, Err: err}
+		profile, err := client.GetProfile(userID, "", 20)
+		return ProfileLoadedMsg{Profile: profile, Err: err}
 	}
 }
 
@@ -218,7 +255,7 @@ func followUserCmd(client *api.Chirpy, userID string) tea.Cmd {
 		if err != nil {
 			return ErrorMsg{Err: err}
 		}
-		return nil
+		return FollowUnfollowSuccessMsg{UserID: userID}
 	}
 }
 
@@ -228,7 +265,6 @@ func unfollowUserCmd(client *api.Chirpy, userID string) tea.Cmd {
 		if err != nil {
 			return ErrorMsg{Err: err}
 		}
-		return nil
+		return FollowUnfollowSuccessMsg{UserID: userID}
 	}
 }
-
