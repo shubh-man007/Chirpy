@@ -13,6 +13,7 @@ type ProfileResponse struct {
 	ChirpsCount    int64       `json:"chirps_count"`
 	Chirps         []ChirpItem `json:"chirps"`
 	NextCursor     *string     `json:"next_cursor,omitempty"`
+	IsFollowing    *bool       `json:"is_following,omitempty"`
 }
 
 type ChirpItem struct {
